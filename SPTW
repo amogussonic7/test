@@ -1,0 +1,3254 @@
+local stand
+local templates = require(13881856942):GetArray()[1]
+local fstand = templates.Archangel
+
+owner.Character.Humanoid:SetAttribute("OriginalWalkspeed", 16)
+
+templates.Taunt.TextBox.RichText = true
+
+templates.Ground.Attachment.vroom.Size = NumberSequence.new({
+	NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(1, 25, 0)
+})
+
+stand = fstand:Clone()
+
+stand.Parent = script
+
+for _, v in pairs(stand:GetDescendants()) do
+	if v:IsA("BasePart") then
+		v.CanTouch = false
+		v.CanCollide = false
+		v.CanQuery = false
+		v.Locked = true
+	end
+end
+
+local debug = false
+local http = game:GetService("HttpService")
+local prefix = "https://github.com/MechaXYZ/VSBScripts/raw/main/SPTW%20Animation%20Modules/"
+
+local function get(url)
+	local cache = _G.http_cache
+
+	if not cache then
+		cache = {}
+		_G.http_cache = cache
+	end
+
+	if not cache[url] then
+		cache[url] = http:GetAsync(url)
+	end
+
+	return cache[url]
+end
+
+local re = Instance.new("RemoteEvent", owner.PlayerGui)
+re.Name = "SPTWEvent"
+
+local rf = Instance.new("RemoteFunction", re)
+rf.Name = "SPTWFunction"
+
+local svl = templates.Arms:Clone()
+svl.Parent = owner.PlayerGui
+
+local vl = Instance.new("ObjectValue", re)
+vl.Name = "StandArms"
+vl.Value = svl
+
+local vl = Instance.new("ObjectValue", re)
+vl.Name = "Stand"
+vl.Value = stand
+
+local sw = Instance.new("Weld", stand)
+sw.Part0 = stand.StandHumanoidRootPart
+sw.Part1 = owner.Character.HumanoidRootPart
+sw.Enabled = true
+
+local function lstr(s)
+	local f, e = loadstring(s)
+
+	if f then
+		return f
+	else
+		error(e)
+	end
+end
+
+local lmbc = 1
+local sounds = {}
+
+local anims = {
+	["StandIdle"] = {
+		["Normal"] = lstr(get(prefix .. "StandIdleNormal.lua"))(),
+		["Archangel"] = lstr(get(prefix .. "StandIdleArchangel.lua"))()
+	},
+	["Resolve"] = {
+		["Normal"] = lstr(get(prefix .. "ResolveNormal.lua"))(),
+		["Archangel"] = lstr(get(prefix .. "ResolveArchangel.lua"))()
+	},
+	["QuickJab"] = {
+		["Stand"] = lstr(get(prefix .. "Jab.lua"))(),
+		["User"] = lstr(get(prefix .. "JabDash.lua"))()
+	},
+	["Beatdown"] = {
+		["Intro"] = lstr(get(prefix .. "BeatdownPunch.lua"))(),
+		["User"] = lstr(get(prefix .. "BeatdownPlayer.lua"))(),
+		["Victim"] = lstr(get(prefix .. "BeatdownVictim.lua"))()
+	},
+	["LMB"] = {
+		["1"] = lstr(get(prefix .. "LMB1.lua"))(),
+		["2"] = lstr(get(prefix .. "LMB2.lua"))(),
+		["3"] = lstr(get(prefix .. "LMB3.lua"))(),
+		["4"] = lstr(get(prefix .. "LMB4.lua"))()
+	},
+
+	["ArmCrush"] = lstr(get(prefix .. "Crush.lua"))(),
+	["Barrage"] = lstr(get(prefix .. "Barrage.lua"))(),
+	["LiverShot"] = lstr(get(prefix .. "LiverShot.lua"))(),
+	["BearingShot"] = lstr(get(prefix .. "Bearing.lua"))(),
+	["GroundSlam"] = lstr(get(prefix .. "GroundSlam.lua"))(),
+	["HeavyPunch"] = lstr(get(prefix .. "ChinCrusher.lua"))(),
+	["KickBarrage"] = lstr(get(prefix .. "KickBarrage.lua"))(),
+	["ArmCrushVictim"] = lstr(get(prefix .. "CrushVictim.lua"))(),
+	["AttackPose"] = lstr(get(prefix .. "AttackPoseLooped.lua"))(),
+	["AttackPoseTransition"] = lstr(get(prefix .. "AttackPoseTransition.lua"))()
+}
+
+local sids = {
+	["Theme"] = "rbxassetid://12786352202",
+	["Unsummon"] = "rbxassetid://6846384718",
+	["SummonEffects"] = "rbxassetid://6775297912",
+	["SummonVoiceline"] = "rbxassetid://6861518948",
+	["LMB1"] = "rbxassetid://6579756877",
+	["LMB2"] = "rbxassetid://6579757313",
+	["LMB3"] = "rbxassetid://6579757792",
+	["LMB4"] = "rbxassetid://6579793108",
+	["SwingLMB"] = "rbxassetid://6706981173",
+	["HitSFX"] = "rbxassetid://6706979361",
+	["HeavyHitSFX"] = "rbxassetid://6164853733",
+	["Barrage"] = "rbxassetid://2404992475",
+	["BarrageSFX"] = "rbxassetid://6720651784",
+	["BarrageHitSFX1"] = "rbxassetid://6753788004",
+	["BarrageHitSFX2"] = "rbxassetid://6753787336",
+	["QuickJab"] = "rbxassetid://6775297653",
+	["QuickJabSFX"] = "rbxassetid://6775297499",
+	["HeavyPunch"] = "rbxassetid://6541267000",
+	["HeavyPunchSFX"] = "rbxassetid://7243326637",
+	["Teleport"] = "rbxassetid://6773724319",
+	["ArmCrush"] = "rbxassetid://6773171863",
+	["ArmCrushSFX"] = "rbxassetid://6773011653",
+	["BearingShotCall"] = "rbxassetid://2554017604",
+	["BearingShotFire"] = "rbxassetid://6772065547",
+	["BearingShotHit"] = "rbxassetid://6773836020",
+	["BearingShotCollide"] = "rbxassetid://7172258964",
+	["Beatdown"] = "rbxassetid://12777282474",
+	["Resolve"] = "rbxassetid://7406447085",
+	["ResolveSFX"] = "rbxassetid://7406446202",
+	["GroundSlam"] = "rbxassetid://6753873283",
+	["GroundSlamSFX"] = "rbxassetid://6630459440"
+}
+
+local dbs = {
+	["EHeld"] = false,
+	["Summon"] = false,
+	["Stunned"] = false,
+	["Barrage"] = false,
+	["Summoned"] = false,
+	["LMBCombo"] = false,
+	["QuickJab"] = false,
+	["HeavyPunch"] = false,
+	["ArmCrush"] = false,
+	["BearingShot"] = false,
+	["LiverShot"] = false,
+	["Teleport"] = false,
+	["Beatdown"] = false,
+	["BeatdownActive"] = false,
+	["Resolve"] = false,
+	["GroundSlam"] = false,
+	["Taunt"] = false
+}
+
+local cds = {
+	["Summon"] = 1.25,
+	["LMBCombo"] = .2,
+	["LMBFinisher"] = 2,
+	["Barrage"] = 3,
+	["QuickJab"] = 2,
+	["HeavyPunch"] = 3,
+	["ArmCrush"]  = 3,
+	["BearingShot"] = .1, -- // :troll:
+	["LiverShot"] = 3,
+	["Teleport"] = 1,
+	["Beatdown"] = 2,
+	["Resolve"] = 2,
+	["GroundSlam"] = 2,
+	["Taunt"] = .5
+}
+
+local bdt = {
+	[1] = {
+		["Text"] = "On closer inspection...",
+		["SoundId"] = "",
+		["StallTime"] = 1,
+	},
+	[2] = {
+		["Text"] = "Good grief.",
+		["SoundId"] = "",
+		["StallTime"] = 1,
+	},
+	[3] = {
+		["Text"] = "Your face is going to end up...",
+		["SoundId"] = "",
+		["StallTime"] = 2,
+	},
+	[4] = {
+		["Text"] = "Even uglier.",
+		["SoundId"] = "",
+		["StallTime"] = 2,
+	}
+}
+
+local taunts = {
+	{
+		["Volume"] = 1,
+		["StallTime"] = 2,
+
+		["Text"] = "Next time we meet, I'm gonna land a thousand punches on that face of yours.",
+		["SoundId"] = "rbxassetid://6934117767",
+
+		["Timings"] = {
+			["Next time we meet, "] = .6
+		}
+	},
+	{
+		["Volume"] = 1,
+		["StallTime"] = 2,
+
+		["Text"] = "I'm sick and tired of hearing that things are impossible or futile.",
+		["SoundId"] = "rbxassetid://6934118107",
+	},
+	{
+		["Volume"] = 1,
+		["StallTime"] = 2,
+
+		["Text"] = "I told you I'd fight, and I'm a man of my word.",
+		["SoundId"] = "rbxassetid://7259089971"
+	},
+	{
+		["Volume"] = 1,
+		["StallTime"] = 2,
+
+		["Text"] = "Better give up.",
+		["SoundId"] = "rbxassetid://6934118392"
+	},
+	{
+		["Volume"] = 1,
+		["StallTime"] = 2,
+
+		["Text"] = "Good grief.",
+		["SoundId"] = "rbxassetid://7259114233"
+	}
+}
+
+local killtxts = {
+	"Dead. Not big surprise.",
+	"Retired!",
+	"Arigato, loser.",
+	"Top ten saddest attempts at anything ever",
+	"Consider rokaing",
+	"Outplayed!",
+	"Failure!",
+	"Oh come on, quit already!"
+}
+
+local overtxts = {
+	"less gooo",
+	"universal!",
+	"outstanding!",
+	"amazing!",
+	"incredible!",
+	"can you beat goku though?",
+	"skill issue",
+	"we do a little trolling",
+	"absolute legend",
+	"vec would be proud",
+	"mad?",
+	"It's skittles friday!",
+	"Who's Joe?",
+	"Style points!",
+	"You're suppose to dodge that.",
+	"FIGHT BACK!",
+	"FIGHT BACK COME ON!",
+	"Ah-Ah-Ah! It's - Your'oe.",
+	"Doyjaainnnn!",
+	"THAT'S A BIT...SUSPICIOUS",
+	"Ok and?",
+	"ONI COMBO",
+	"GET HIM HE RKER!@#$!#",
+	"YOOOOOOOOO!",
+	"SWAG!",
+	"Exaggerated Swagger of a Stand user!",
+	"Next time i'll hit you with the- E+R+T+V+Y+LMB+LMB+LMB+F+H+U+E+R+F+LMB+LMB+LMB+LMB combo for sure!",
+	"Hmmmm, nice!",
+	"Do better!",
+	"When Update?",
+	"Smells like stand issue",
+	"IS THAT A JOJO REFERENCE?",
+	"Di Molto!",
+	"Come back when you're a little richer",
+	"MUDA!",
+	"ORA!",
+	"HORA!",
+	"You appear to have been dunked on.",
+	"This is the results.",
+	"CHILL!",
+	"Menacingゴ",
+	"insert a quote",
+	"WOAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+	"Nice",
+	"LET'S GO",
+	"Get them!",
+	"a little more!",
+	"HUNT THEM DOWN",
+	"THEY WERE TWO STEPS LATE",
+	"either you or them!",
+	"you ticked them off.",
+	"DAMN",
+	"skilful",
+	"H",
+	"m1 m1 m1 m1",
+	"epic!"
+}
+
+for i, v in pairs(sids) do
+	local snd = Instance.new("Sound")
+	snd.SoundId = v
+	snd.Volume = .75
+	snd.RollOffMinDistance = 50
+
+	sounds[i] = snd
+end
+
+sounds.BearingShotCollide.Volume = .2
+sounds.BearingShotCollide.RollOffMaxDistance = 60
+
+owner.Character.Humanoid.MaxHealth = 525
+owner.Character.Humanoid.Health = 525
+
+-- // animation handler
+
+local AnimationHandler = {}
+AnimationHandler.__index = AnimationHandler
+
+AnimationHandler._Rigs = {}
+AnimationHandler._Animations = {}
+
+do
+	function AnimationHandler:ToggleWelds(rig, legs, en, bl)
+		bl = bl or {}
+		rig = rig or owner.Character
+
+		if AnimationHandler._Animations[rig] == nil then
+			if rig:FindFirstChildOfClass("Humanoid") then
+				AnimationHandler:_SetupRig(rig, rig:FindFirstChildOfClass("Humanoid").RigType.Name, false)
+			else
+				AnimationHandler:_SetupRig(rig, "R15", false)
+			end
+		end
+
+		for _, v in pairs(rig:GetDescendants()) do
+			if (v:IsA("Motor6D") or v:IsA("Motor"))  and v:FindFirstChild("AnimationWeld") then
+				if legs == true and not string.find(v.Name, "Hip") and not table.find(bl, v.Name) then
+					v.AnimationWeld.Enabled = en
+				elseif legs == false and not table.find(bl, v.Name) then
+					v.AnimationWeld.Enabled = en
+				end
+			end
+		end
+	end
+
+	function AnimationHandler:GetAnimationLength(anim)
+		local lkf = 0
+
+		for i, _ in pairs(anim.Keyframes) do
+			if i > lkf then
+				lkf = i
+			end
+		end
+
+		return lkf
+	end
+
+	function AnimationHandler:Stop(args)
+		local rig = args.Rig or owner.Character
+		local c0sap = AnimationHandler._Rigs[rig]
+		local atds = AnimationHandler._Animations
+
+		local parts = c0sap.Parts
+		local oldc0s = c0sap.OldC0s
+
+		local anim = args.Animation
+		local ft = args.FadeTime or .5
+		local dw = args.DisableWelds or false
+
+		local old = atds[rig][anim]
+
+		local function check()
+			local lp = 0
+			local which = nil
+
+			atds[rig][anim] = nil
+
+			for i, v in pairs(atds[rig]) do
+				if v.Priority > lp then
+					lp = v.Priority
+					which = v
+				end
+			end
+
+			atds[rig][anim] = old
+
+			return which
+		end
+
+		if atds[rig][anim] ~= nil then
+			for _, thread in pairs(atds[rig][anim]) do
+				if type(thread) == "thread" then
+					task.cancel(thread)
+				end
+			end
+
+			for _, tween in pairs(atds[rig][anim]["Tweens"]) do
+				tween:Cancel()
+			end
+		end
+
+		task.wait()
+
+		-- // atds[rig][anim] = nil
+
+		local getn = -1
+
+		for _, v in pairs(atds[rig]) do
+			getn += 1
+		end
+
+		local which = check()
+
+		if which ~= atds[rig][anim] and which ~= nil then
+
+			if dbs.Summoned == true and rig == stand and (anim == anims.LMB["1"] or anim == anims.LMB["2"] or anim == anims.LMB["3"] or anim == anims.LMB["4"]) then
+				which = atds[rig][anims.StandIdle.Normal]
+			end
+
+			local args = {
+				["Time"] = ft,
+				["Override"] = true,
+				["Tweening"] = true,
+				["EasingStyle"] = "Linear",
+				["AnimationTable"] = which,
+				["Rig"] = stand,
+				["Poses"] = which.Animation.Keyframes[which.CurrentTime]
+			}
+
+			coroutine.wrap(function()
+				local t = args.Time
+				local tbl = args.Poses
+				local atbl = args.AnimationTable
+				local tween = args.Tweening or true
+				local es = args.EasingStyle or "Linear"
+				local rig = args.Rig or owner.Character
+				local which = args.HighestPriority or atbl
+
+				local ius = atbl["InUse"]
+				local tweens = atbl["Tweens"]
+
+				for i, _ in pairs(AnimationHandler._Rigs[rig].Parts) do
+					ius[i] = false
+				end
+
+				local function recurse(v)
+					if type(v) == "table" then
+						for i, v in pairs(v) do
+							ius[i] = false
+
+							local part = AnimationHandler._Rigs[rig].Parts[i]
+							local oldc0 = AnimationHandler._Rigs[rig].OldC0s[i]
+
+							if part then
+							   ius[i] = true
+
+								if tween == true then
+									pcall(function()
+										local tw = game:GetService("TweenService"):Create(part, TweenInfo.new(ft, Enum.EasingStyle.Cubic), {C0 = oldc0 * v.CFrame}):Play()
+									end)
+								else
+									pcall(function()
+										part.C0 = oldc0 * v.CFrame
+									end)
+								end
+							end
+
+							recurse(v)
+						end
+					end
+				end
+
+				recurse(tbl)
+			end)()
+		end
+
+		for i, v in pairs(parts) do
+			if which == atds[rig][anim] or which == nil then
+				game:GetService("TweenService"):Create(v, TweenInfo.new(ft), {C0 = oldc0s[i]}):Play()
+			end
+
+			task.delay(ft, function()
+				if args.DisableWelds == true and getn == 0 then
+					v.Enabled = false
+				end
+			end)
+		end
+
+		task.delay(ft, function()
+			atds[rig][anim] = nil
+		end)
+	end
+
+	function AnimationHandler:_SetupRig(rig, rt, en)
+		local parts = {}
+		local oldc0s = {}
+
+		local animated = AnimationHandler._Rigs
+
+		if animated[rig] ~= nil then
+			print(rig)
+			return
+		end
+
+		for _, v in pairs(rig:GetDescendants()) do
+			if (v:IsA("Motor6D") or v:IsA("Motor")) and not v:FindFirstChild("AnimationWeld") then
+				local w = Instance.new("Weld", v)
+				w.Name = "AnimationWeld"
+				w.Part0 = v.Part0
+				w.Part1 = v.Part1
+				w.C0 = v.C0
+				w.C1 = v.C1
+				w.Enabled = en or true
+			end
+		end
+
+		if rt == nil or rt == "R6" then
+			local torso = rig:WaitForChild("Torso")
+
+			local neck, rh, lh, ls, rs, rj
+
+			pcall(function()
+				neck = torso.Neck
+				rh = torso["Right Hip"]
+				lh = torso["Left Hip"]
+				ls = torso["Left Shoulder"]
+				rs =  torso["Right Shoulder"]
+
+				rj = torso.Parent.HumanoidRootPart.RootJoint
+			end)
+
+			local joints = {neck, rh, lh, ls, rs, rj}
+
+			for _, v in pairs(joints) do
+				if v ~= nil then
+					oldc0s[v.Part1.Name] = v.C0
+					parts[v.Part1.Name] = v.AnimationWeld
+				end
+			end
+		elseif rt == "R15" then
+			for _, v in pairs(rig:GetDescendants()) do
+				if (v:IsA("Motor6D") or v:IsA("Motor")) then
+					oldc0s[v.Part1.Name] = v.C0
+					parts[v.Part1.Name] = v.AnimationWeld
+				end
+			end
+		end
+
+		animated[rig] = {
+			["Parts"] = parts,
+			["OldC0s"] = oldc0s
+		}
+
+		return animated[rig]
+	end
+
+	function AnimationHandler:_Recurse(args)
+		local t = args.Time
+		local tbl = args.Poses
+		local atbl = args.AnimationTable
+		local tween = args.Tweening or true
+		local es = args.EasingStyle or "Linear"
+		local rig = args.Rig or owner.Character
+		local which = args.HighestPriority or atbl
+
+		local ius = atbl["InUse"]
+		local tweens = atbl["Tweens"]
+
+		for i, _ in pairs(AnimationHandler._Rigs[rig].Parts) do
+			ius[i] = false
+		end
+
+		local function recurse(v)
+			if type(v) == "table" then
+				for i, v in pairs(v) do
+					ius[i] = false
+
+					local part = AnimationHandler._Rigs[rig].Parts[i]
+					local oldc0 = AnimationHandler._Rigs[rig].OldC0s[i]
+
+					if part then
+						if args.Override == true then
+							ius[i] = true
+
+							if tween == true then
+								pcall(function()
+									local tw = game:GetService("TweenService"):Create(part, TweenInfo.new(t, es), {C0 = oldc0 * v.CFrame})
+									tw:Play()
+
+									table.insert(tweens, tw)
+								end)
+							else
+								pcall(function()
+									part.C0 = oldc0 * v.CFrame
+								end)
+							end
+						end
+
+						if args.Override ~= true and which == atbl and which["InUse"][i] ~= true then
+							ius[i] = true
+
+							if tween == true then
+								pcall(function()
+									local tw = game:GetService("TweenService"):Create(part, TweenInfo.new(t, es), {C0 = oldc0 * v.CFrame})
+									tw:Play()
+
+									table.insert(tweens, tw)
+								end)
+							else
+								pcall(function()
+									part.C0 = oldc0 * v.CFrame
+								end)
+							end
+						end
+					end
+
+					recurse(v)
+				end
+			end
+		end
+
+		recurse(tbl)
+	end
+
+	function AnimationHandler:Animate(args)
+		local anim
+		local c0sap
+		local lt = 0
+		local lkf = 0
+		local tbl = args.Animation
+		local looping = args.Looping
+		local speed = args.Speed or 1
+		local prior = args.Priority or 2
+		local tween = args.Tweening or true
+		local es = args.EasingStyle or "Linear"
+		local rig = args.Rig or owner.Character
+		local animated = AnimationHandler._Rigs
+		local atds = AnimationHandler._Animations
+
+		if animated[rig] == nil then
+			if rig:FindFirstChildOfClass("Humanoid") then
+				c0sap = AnimationHandler:_SetupRig(rig, rig:FindFirstChildOfClass("Humanoid").RigType.Name, args.DisableOnSetup)
+			else
+				c0sap = AnimationHandler:_SetupRig(rig, "R15", args.DisableOnSetup)
+			end
+		else
+			c0sap = animated[rig]
+		end
+
+		local parts = c0sap.Parts
+		local oldc0s = c0sap.OldC0s
+
+		if type(es) == "string" then
+			es = Enum.EasingStyle[es]
+		end
+
+		if type(tbl) == "string" then -- // check if the argument is a string or url, then decode it and get table
+			anim = loadstring(game:GetService("HttpService"):GetAsync(tbl))()
+		elseif type(tbl) ~= "string" then -- // check if the argument is a table, then set anim to tbl
+			anim = tbl
+		end
+
+		if atds[rig] == nil then
+			atds[rig] = {}
+		end
+
+		local function reset()
+			atds[rig][anim] = {}
+			atds[rig][anim]["InUse"] = {}
+			atds[rig][anim]["Tweens"] = {}
+			atds[rig][anim]["Speed"] = speed
+			atds[rig][anim]["Paused"] = false
+			atds[rig][anim]["CurrentTime"] = 0
+			atds[rig][anim]["Priority"] = prior
+			atds[rig][anim]["Animation"] = anim
+		end
+
+		reset()
+
+		for i, _ in pairs(anim.Keyframes) do
+			if i > lkf then
+				lkf = i
+			end
+		end
+
+		-- // print(lkf, "lkf")
+
+		local function check()
+			local lp = 0
+			local which = nil
+
+			for i, v in pairs(atds[rig]) do
+				if v.Priority > lp then
+					lp = v.Priority
+					which = v
+				end
+			end
+
+			return which
+		end
+
+		local function animate()
+			for i, v in pairs(anim.Keyframes) do
+				local t = i / speed
+
+				if args.Reverse == true then
+					t = lkf - (i / speed)
+				end
+
+				table.insert(atds[rig][anim], task.delay(t, function()
+					if atds[rig][anim] == nil then
+						reset()
+					end
+
+					atds[rig][anim]["CurrentTime"] = t
+
+					local which = check()
+					local t = (i - lt) / speed
+
+					AnimationHandler:_Recurse({
+						["Time"] = t,
+						["Poses"] = v,
+						["Tweening"] = tween,
+						["EasingStyle"] = es,
+						["HighestPriority"] = which,
+						["Rig"] = rig or owner.Character,
+						["AnimationTable"] = atds[rig][anim]
+					})
+
+					lt = i
+				end))
+			end
+
+			local getn = 0
+
+			for _, v in pairs(anim.Keyframes) do
+				getn += 1
+			end
+
+			if looping == true and atds[rig][anim] ~= nil and getn > 1 then
+				table.insert(atds[rig][anim], task.delay(lkf / speed, animate))
+			end
+
+			if (looping == false or looping == nil) and getn > 1 then
+				task.wait(lkf / speed)
+
+				if args.StallTime then
+					task.wait(args.StallTime)
+				end
+
+				AnimationHandler:Stop({
+					["Rig"] = rig,
+					["Animation"] = anim,
+					["DisableWelds"] = args.DisableWelds or false
+				})
+			end
+		end
+
+		if args.Wrapped == true then
+			coroutine.wrap(animate)()
+		else
+			animate()
+		end
+
+		local AnimationTrack = {}
+		AnimationTrack.__index = AnimationTrack
+
+		AnimationTrack.Rig = rig
+		AnimationTrack.Animation = anim
+		AnimationTrack.AnimationTable = atds[rig][anim]
+		AnimationTrack.Length = AnimationHandler:GetAnimationLength(anim)
+
+		return AnimationTrack
+	end
+end
+
+-- [[ FUNCTIONS AND EVENTS ]] --
+
+local function hb(pt, cf, size, bl, type)
+	return rf:InvokeClient(owner, pt, cf, size, bl, type)
+end
+
+local function play(what, p)
+	if sounds[what] then
+		local snd = sounds[what]:Clone()
+		snd.Name = what
+		snd.Parent = p or stand.StandHumanoidRootPart
+		snd:Play()
+
+		coroutine.wrap(function()
+			snd.Ended:Wait()
+			snd:Destroy()
+		end)()
+
+		return snd
+	end
+end
+
+local function findhum(p)
+	if p:FindFirstAncestorOfClass("Model") then
+		if p:FindFirstAncestorOfClass("Model"):FindFirstChildOfClass("Humanoid") then
+			return p:FindFirstAncestorOfClass("Model"):FindFirstChildOfClass("Humanoid")
+		else
+			return nil
+		end
+	else
+		return nil
+	end
+end
+
+local function dmgui(mdl, dmg)
+	if mdl:GetAttribute("DeadNotBigSurprise") == true then
+		return
+	end
+
+	local ui = mdl:FindFirstChild("DamageGUI")
+
+	if ui then
+		local tb = ui.BBG.TextBox
+
+		local ogdmg = tonumber(tb.Text) or 0
+		ogdmg += dmg
+
+		local txt
+
+		if math.floor(ogdmg) == ogdmg then
+			txt = tostring(ogdmg)
+		else
+			txt = string.format("%.1f", tostring(ogdmg))
+		end
+
+		if ogdmg > 100 then
+			tb.Text = overtxts[Random.new():NextInteger(1, table.getn(overtxts))]
+			ui.Name = "DisabledDamageGUI"
+		elseif mdl:FindFirstChildWhichIsA("Humanoid", true).Health <= 0 then
+			tb.Text = killtxts[Random.new():NextInteger(1, table.getn(killtxts))]
+			ui.Name = "DisabledDamageGUI"
+
+			mdl:SetAttribute("DeadNotBigSurprise", true)
+		else
+			tb.Text = txt
+		end
+
+		ui.BBG.Size = UDim2.new(10, 0, 2, 0)
+
+		tb.TextTransparency = 0
+		tb.TextStrokeTransparency = 0
+
+		local hrp = (dbs.BeatdownActive == true and mdl:FindFirstChild("Torso") or mdl:FindFirstChild("HumanoidRootPart"))
+
+		ui.CFrame = hrp.CFrame * CFrame.new(Random.new():NextNumber(-1, 1), Random.new():NextNumber(-1, 1), Random.new():NextNumber(-1, 1))
+
+		local inf1 = TweenInfo.new(.5, Enum.EasingStyle.Cubic,Enum.EasingDirection.Out)
+		local inf2 = TweenInfo.new(3, Enum.EasingStyle.Quint, Enum.EasingDirection.In)
+
+		game:GetService("TweenService"):Create(ui.BBG, inf1, {Size = UDim2.new(5, 0, 1, 0)}):Play()
+		game:GetService("TweenService"):Create(tb, inf1, {Rotation = Random.new():NextNumber(-15, 15)}):Play()
+
+		game:GetService("TweenService"):Create(ui, inf2, {CFrame = ui.CFrame * CFrame.new(0, -4, 0)}):Play()
+		game:GetService("TweenService"):Create(tb, inf2, {TextTransparency = 1, TextStrokeTransparency = 1}):Play()
+	else
+		local ui = templates.DamageGUI:Clone()
+		ui.Parent = mdl
+
+		local txt
+
+		if math.floor(dmg) == dmg then
+			txt = tostring(dmg)
+		else
+			txt = string.format("%.1f", tostring(dmg))
+		end
+
+		local tb = ui.BBG.TextBox
+		tb.Text = txt
+
+		if mdl:FindFirstChildWhichIsA("Humanoid", true).Health <= 0 then
+			tb.Text = killtxts[Random.new():NextInteger(1, table.getn(killtxts))]
+			ui.Name = "DisabledDamageGUI"
+
+			mdl:SetAttribute("DeadNotBigSurprise", true)
+		end
+
+		ui.BBG.Size = UDim2.new(10, 0, 2, 0)
+
+		tb.TextTransparency = 0
+		tb.TextStrokeTransparency = 0
+
+		local hrp = (dbs.BeatdownActive == true and mdl:FindFirstChild("Torso") or mdl:FindFirstChild("HumanoidRootPart"))
+
+		ui.CFrame = hrp.CFrame * CFrame.new(Random.new():NextNumber(-1, 1), Random.new():NextNumber(-1, 1), Random.new():NextNumber(-1, 1))
+
+		local inf1 = TweenInfo.new(.5, Enum.EasingStyle.Cubic,Enum.EasingDirection.Out)
+		local inf2 = TweenInfo.new(3, Enum.EasingStyle.Quint, Enum.EasingDirection.In)
+
+		game:GetService("TweenService"):Create(ui.BBG, inf1, {Size = UDim2.new(5, 0, 1, 0)}):Play()
+		game:GetService("TweenService"):Create(tb, inf1, {Rotation = Random.new():NextNumber(-15, 15)}):Play()
+
+		game:GetService("TweenService"):Create(ui, inf2, {CFrame = ui.CFrame * CFrame.new(0, -4, 0)}):Play()
+		game:GetService("TweenService"):Create(tb, inf2, {TextTransparency = 1, TextStrokeTransparency = 1}):Play()
+
+		coroutine.wrap(function()
+			repeat
+				task.wait()
+			until tb.TextTransparency >= .99
+
+			ui:Destroy()
+		end)()
+	end
+end
+
+local function stun(hum, t)
+	if t == 0 or nil then
+		return
+	end
+
+	coroutine.wrap(function()
+		local mdl = hum:FindFirstAncestorOfClass("Model")
+		local sc = mdl:GetAttribute("StunCounter") or 0
+		mdl:SetAttribute("StunCounter", sc + 1)
+
+		local ows = 16 -- // hum:GetAttribute("OriginalWalkspeed") or hum.WalkSpeed
+		hum:SetAttribute("OriginalWalkspeed", ows)
+
+		hum.WalkSpeed = .5
+
+		mdl:SetAttribute("Stunned", true)
+
+		if not mdl:FindFirstChild("StunGUI") and dbs.BeatdownActive == false then
+			local ui = templates.DamageGUI.BBG:Clone()
+			ui.Name = "StunGUI"
+			ui.Parent = mdl
+			ui.TextBox.Text = "STUNNED"
+			ui.ClipsDescendants = false
+			ui.Size = UDim2.fromScale(3, 1.5)
+			ui.Adornee = mdl.HumanoidRootPart
+			ui.StudsOffset = Vector3.new(0, 3, 0)
+		end
+
+		coroutine.wrap(function()
+			repeat
+				hum:UnequipTools()
+				task.wait()
+			until mdl:GetAttribute("StunCounter") == 0
+		end)()
+
+		task.wait(t)
+
+		if mdl:GetAttribute("StunCounter") ~= sc + 1 then
+			return
+		end
+
+		mdl:SetAttribute("StunCounter", 0)
+
+		if mdl:FindFirstChild("StunGUI") then
+			mdl.StunGUI:Destroy()
+		end
+
+		hum:FindFirstAncestorOfClass("Model"):SetAttribute("Stunned", false)
+
+		hum.WalkSpeed = ows
+	end)()
+end
+
+local function ghit(p, n)
+	local cf = p.CFrame
+
+	local h1 = templates.HitEffects.Hit:Clone()
+	local h2 = templates.HitEffects.Hit3:Clone()
+	local h3 = templates.HitEffects.HitPE:Clone()
+
+	for i = 1, 10 do
+		coroutine.wrap(function()
+			local lv = cf * CFrame.Angles(math.rad(Random.new():NextNumber(0, 360)), 0, math.rad(Random.new():NextNumber(0, 360)))
+
+			local h = h1:Clone()
+			h.Size = Vector3.new(Random.new():NextNumber(.1, .3), Random.new():NextNumber(1, 3), Random.new():NextNumber(.1, .3)) * 1.5
+			h.CFrame = lv * CFrame.new(0, h.Size.Y / 2, 0)
+			h.Parent = script
+
+			local tw = game:GetService("TweenService"):Create(h, TweenInfo.new(.5), {CFrame = h.CFrame * CFrame.new(0, Random.new():NextNumber(3, 8), 0), Size = Vector3.new(), Transparency = 1})
+			tw:Play()
+
+			coroutine.wrap(function()
+				tw.Completed:Wait()
+				h:Destroy()
+			end)()
+		end)()
+	end
+
+	h2.CFrame = cf
+	h2.Parent = script
+
+	h3.Parent = p
+	h3:Emit(n or 2)
+
+	for _, v in ipairs(h2.Attachment:GetChildren()) do
+		v.Brightness = 10
+		v:Emit(25)
+	end
+
+	task.delay(.5, function()
+		h2:Destroy()
+		h3:Destroy()
+	end)
+end
+
+local function hfx(t, victim, ep)
+	local ep = ep or victim.HumanoidRootPart
+
+	if t == "Light" then
+		local spl = templates.HitEffects.Light:Clone()
+		spl.CFrame = CFrame.new(ep.CFrame.Position, owner.Character.HumanoidRootPart.CFrame.Position) * CFrame.Angles(math.random(), math.random(), math.random())
+		spl.CFrame *= CFrame.new(Random.new():NextNumber(-1, .5), Random.new():NextNumber(-.5, 1), Random.new():NextNumber(-1, .5))
+		spl.Parent = script
+
+		game:GetService("TweenService"):Create(spl, TweenInfo.new(3, Enum.EasingStyle.Cubic), {Size = Vector3.new(2, 10, 1), Transparency = 1}):Play()
+
+		task.delay(.2, spl.Destroy, spl)
+		ghit(ep)
+	elseif t == "Heavy" then
+		ghit(ep, 25)
+
+		local h = templates.HitEffects.Heavy:Clone()
+		h.Parent = script
+		h.CFrame = ep.CFrame
+
+		for _, v in ipairs(h.Attachment:GetChildren()) do
+			v.Color = ColorSequence.new(Color3.new(1, 1, 1))
+			v.Brightness = 10
+
+			v:Emit(15)
+		end
+
+		task.delay(1, h.Destroy, h)
+	elseif t == "ArmCrush" then
+		local di1 = templates.DonutImpact1:Clone()
+		di1.Parent = script
+		di1.CFrame = ep.CFrame * CFrame.Angles(math.rad(Random.new():NextNumber(-360, 360)), math.rad(Random.new():NextNumber(-360, 360)), math.rad(Random.new():NextNumber(-360, 360)))
+
+		game:GetService("TweenService"):Create(di1, TweenInfo.new(1, Enum.EasingStyle.Circular, Enum.EasingDirection.Out), {Transparency = 1, Size = di1.Size * 2}):Play()
+		task.delay(1, di1.Destroy, di1)
+
+
+		local di2 = templates.DonutImpact2:Clone()
+		di2.Parent = script
+		di2.CFrame = ep.CFrame * CFrame.Angles(math.rad(Random.new():NextNumber(-360, 360)), math.rad(Random.new():NextNumber(-360, 360)), math.rad(Random.new():NextNumber(-360, 360)))
+
+		game:GetService("TweenService"):Create(di2, TweenInfo.new(1, Enum.EasingStyle.Circular, Enum.EasingDirection.Out), {Transparency = 1, Size = di2.Size * 2}):Play()
+		task.delay(1, di2.Destroy, di2)
+
+		for _ = 1, 14 do
+			local btrl = templates.WaterBeamIn:Clone()
+			btrl.Parent = script
+			btrl.Color = Color3.new(1, 1, 1)
+			btrl.Size = Vector3.new(btrl.Size.X, btrl.Size.Y, Random.new():NextNumber(3, 8))
+			btrl.CFrame = ep.CFrame * CFrame.Angles(math.rad(Random.new():NextNumber(-360, 360)), math.rad(Random.new():NextNumber(-360, 360)), math.rad(Random.new():NextNumber(-360, 360)))
+
+			game:GetService("TweenService"):Create(btrl, TweenInfo.new(.5, Enum.EasingStyle.Circular, Enum.EasingDirection.Out), {CFrame = btrl.CFrame * CFrame.new(0, 0, -(Random.new():NextNumber(6, 12)))}):Play()
+
+			coroutine.wrap(function()
+				task.wait(.25)
+				game:GetService("TweenService"):Create(btrl, TweenInfo.new(.25, Enum.EasingStyle.Circular, Enum.EasingDirection.Out), {Transparency = 1}):Play()
+			end)()
+
+			task.delay(1, btrl.Destroy, btrl)
+		end
+
+		local p = Instance.new("Part", script)
+		p.Anchored = false
+		p.Material = "Neon"
+		p.CanCollide = false
+		p.Color = Color3.new(1, 1, 1)
+		p.Size = ep.Size
+		p.CFrame = ep.CFrame
+
+		local w = Instance.new("Weld", ep)
+		w.Part0 = ep
+		w.Part1 = p
+
+		game:GetService("TweenService"):Create(w.Part1, TweenInfo.new(.4, Enum.EasingStyle.Circular, Enum.EasingDirection.Out), {Size = w.Part1.Size * 3, Transparency = 1}):Play()
+
+		task.delay(1, p.Destroy, p)
+		task.delay(1, w.Destroy, w)
+	end
+end
+
+local function attack(tbl, stats)
+	local victims = tbl
+	local dist = math.huge
+
+	if table.getn(victims) ~= 0 then
+		local snd = stats.Sound or "HitSFX"
+
+		if stats.Sound then
+			if typeof(stats.Sound) == "table" then
+				snd = stats.Sound[Random.new():NextInteger(1, table.getn(stats.Sound))]
+			end
+		end
+
+		play(snd)
+	end
+
+	local mult = (owner.Character:GetAttribute("Resolve") == true and 1.2 or 1)
+
+	for _, victim in pairs(victims) do
+		local hum, hrp = victim:FindFirstChildWhichIsA("Humanoid", true), victim:FindFirstChild("HumanoidRootPart", true)
+
+		hum.Health -= (stats.Damage or 0) * mult
+
+		dmgui(victim, stats.Damage * mult)
+
+		stun(hum, stats.Stun)
+
+		if stats.Animation and hum.RigType == Enum.HumanoidRigType.R6 then
+			coroutine.wrap(function()
+				AnimationHandler:Animate({
+					["Rig"] = victim,
+					["StallTime"] = .2,
+					["DisableWelds"] = true,
+					["Animation"] = stats.Animation
+				})
+			end)()
+		end
+
+		if stats.Knockback then
+			local bv = Instance.new("BodyVelocity", hrp)
+			bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge) -- // Vector3.new(1, 1, 1) * stats.Knockback[1]
+			bv.Velocity = (owner.Character.HumanoidRootPart.CFrame.lookVector * stats.Knockback[1]) + (stats.Knockback[3] or Vector3.new())
+
+			task.delay(stats.Knockback[2], function()
+				bv:Destroy()
+			end)
+		end
+
+		coroutine.wrap(hfx)(stats.HitEffect or "Light", victim, stats.EffectPart)
+	end
+end
+
+local function summon()
+	if dbs.Summon == true then
+		return
+	end
+
+	if dbs.Stunned == true then
+		return
+	end
+
+	dbs.Stunned = true
+	dbs.Summon = true
+
+	if dbs.Summoned == false then
+		dbs.Summoned = true
+
+		for _, v in pairs(stand:GetDescendants()) do
+			if (v:IsA("BasePart") or v:IsA("Decal") or v:IsA("Texture")) and not v:GetAttribute("Transparency") and v.Name ~= "StandHumanoidRootPart" then
+				game:GetService("TweenService"):Create(v, TweenInfo.new(.3), {Transparency = 0}):Play()
+			end
+		end
+
+		for _, v in pairs(owner.Character:GetChildren()) do
+			if v:IsA("BasePart") and v.Name ~= "HumanoidRootPart" and not v:FindFirstChild("StandAura") then
+				local aura = templates.StandAura:Clone()
+
+				for _, v2 in pairs(aura:GetChildren()) do
+					v2.Color = ColorSequence.new{
+						ColorSequenceKeypoint.new(0, Color3.new(1, 1, 0)),
+						ColorSequenceKeypoint.new(1, Color3.new(1, 1, 1))
+					}
+
+					v2.Enabled = true
+					v2.Parent = v
+				end
+			end
+		end
+
+		AnimationHandler:Animate({
+			["Rig"] = stand,
+			["Wrapped"] = true,
+			["Looping"] = true,
+			["Animation"] = anims.StandIdle.Normal
+		})
+
+		play("SummonEffects")
+		play("SummonVoiceline")
+
+		if stand:FindFirstChild("Stand Torso") then
+			if stand["Stand Torso"]:FindFirstChild("SummonParticle") then
+				for i, v in pairs(stand["Stand Torso"].SummonParticle:GetChildren()) do
+					v.LockedToPart = true
+					v:Emit(v.Rate)
+				end
+			end
+		end
+
+		for _, v in pairs(stand:GetDescendants()) do
+			if v.Name == "StandAura" then
+				v.Enabled = true
+			end
+		end
+
+		for _, v in pairs(owner.Character:GetDescendants()) do
+			if v.Name == "StandAura" then
+				v.Enabled = true
+			end
+		end
+	elseif dbs.Summoned == true then
+		dbs.Summoned = false
+
+		for _, v in pairs(stand:GetDescendants()) do
+			if v.Name == "StandAura" then
+				v.Enabled = false
+			end
+		end
+
+		for _, v in pairs(owner.Character:GetDescendants()) do
+			if v.Name == "StandAura" then
+				v.Enabled = false
+			end
+		end
+
+		play("Unsummon")
+
+		AnimationHandler:Stop({
+			["Rig"] = stand,
+			["FadeTime"] = .3,
+			["Wrapped"] = true,
+			["Animation"] = anims.StandIdle.Normal
+		})
+
+		for _, v in pairs(stand:GetDescendants()) do
+			if v:IsA("BasePart") or v:IsA("Decal") or v:IsA("Texture") then
+				game:GetService("TweenService"):Create(v, TweenInfo.new(.3), {Transparency = 1}):Play()
+			end
+		end
+	end
+	task.delay(.3, function()
+		dbs.Stunned = false
+		task.wait(cds.Summon - .3)
+
+		dbs.Summon = false
+	end)
+end
+
+local function combo()
+	if dbs.LMBCombo == true then
+		return
+	end
+
+	if dbs.Stunned == true then
+		return
+	end
+
+	dbs.Stunned = true
+
+	coroutine.wrap(function()
+		if AnimationHandler._Animations[owner.Character] == nil then
+			AnimationHandler._Animations[owner.Character] = {}
+		end
+
+		if lmbc == 1 and AnimationHandler._Animations[owner.Character][anims.AttackPoseTransition] == nil then
+			AnimationHandler:ToggleWelds(nil, true, true)
+			AnimationHandler:ToggleWelds(nil, false, false)
+			AnimationHandler:ToggleWelds(nil, true, true)
+
+			AnimationHandler:Animate({
+				["DisableWelds"] = true,
+				["Animation"] = anims.AttackPoseTransition
+			})
+		end
+	end)()
+
+	if dbs.Summoned == false then
+		task.delay(.2, function()
+			for _, v in pairs(owner.Character:GetDescendants()) do
+				if v.Name == "StandAura" then
+					v.Enabled = true
+				end
+			end
+
+			for _, v in pairs(stand:GetDescendants()) do
+				if (v:IsA("BasePart") or v:IsA("Decal") or v:IsA("Texture")) and not v:GetAttribute("Transparency") and v.Name ~= "StandHumanoidRootPart" then
+					game:GetService("TweenService"):Create(v, TweenInfo.new(.3), {Transparency = 0}):Play()
+				end
+			end
+		end)
+	end
+
+	dbs.LMBCombo = true
+
+	play("LMB" .. lmbc)
+
+	local inhb = hb(stand.StandHumanoidRootPart, CFrame.new(0, 0, -4), Vector3.new(5, 5, 6))
+
+	if lmbc > 129449149 then -- // 1 then
+		AnimationHandler:Stop({
+			["Rig"] = stand,
+			["FadeTime"] = 0,
+			["Animation"] = anims.LMB[tostring(lmbc - 1)]
+		})
+	end
+
+	AnimationHandler:Animate({
+		["Rig"] = stand,
+		["Wrapped"] = true,
+		["Priority"] = 2 + (lmbc / 10),
+		["Speed"] = (lmbc == 4 and 2 or 1),
+		["Animation"] = anims.LMB[tostring(lmbc)]
+	})
+
+	if lmbc == 4 then
+		lmbc = 1
+
+		coroutine.wrap(function()
+			attack(inhb, {
+				["Stun"] = .4,
+				["Damage"] = 25,
+				["HitEffect"] = "Heavy",
+				["Sound"] = "HeavyHitSFX",
+				["Knockback"] = {75, .3, Vector3.new(0, 35, 0)}
+			})
+		end)()
+
+		task.delay(AnimationHandler:GetAnimationLength(anims.LMB["4"]) / 2, function()
+			if dbs.Summoned == false then
+				for _, v in pairs(owner.Character:GetDescendants()) do
+					if v.Name == "StandAura" then
+						v.Enabled = false
+					end
+				end
+
+				for _, v in pairs(stand:GetDescendants()) do
+					if (v:IsA("BasePart") or v:IsA("Decal") or v:IsA("Texture")) and not v:GetAttribute("Transparency") and v.Name ~= "StandHumanoidRootPart" then
+						game:GetService("TweenService"):Create(v, TweenInfo.new(.3), {Transparency = 1}):Play()
+					end
+				end
+			end
+		end)
+
+		task.delay(cds.LMBCombo, function()
+			dbs.Stunned = false
+		end)
+
+		task.delay(cds.LMBFinisher, function()
+			dbs.LMBCombo = false
+		end)
+	else
+		play("SwingLMB")
+		lmbc += 1
+
+		coroutine.wrap(function()
+			attack(inhb, {
+				["Stun"] = .75,
+				["Damage"] = 8,
+				["Knockback"] = {5, .05}
+			})
+		end)()
+
+		coroutine.wrap(function()
+			local clmb = lmbc
+			local al = AnimationHandler:GetAnimationLength(anims.LMB[tostring(clmb)])
+
+			task.wait(al)
+
+			if lmbc == clmb then
+				if dbs.Summoned == false then
+					for _, v in pairs(owner.Character:GetDescendants()) do
+						if v.Name == "StandAura" then
+							v.Enabled = false
+						end
+					end
+
+					for _, v in pairs(stand:GetDescendants()) do
+						if (v:IsA("BasePart") or v:IsA("Decal") or v:IsA("Texture")) and not v:GetAttribute("Transparency") and v.Name ~= "StandHumanoidRootPart" then
+							game:GetService("TweenService"):Create(v, TweenInfo.new(.3), {Transparency = 1}):Play()
+						end
+					end
+				end
+			end
+
+			task.wait(1.05 - al)
+
+			if lmbc == clmb then
+				lmbc = 1
+			end
+		end)()
+
+		task.delay(cds.LMBCombo, function()
+			dbs.LMBCombo = false
+			dbs.Stunned = false
+		end)
+	end
+end
+
+local function bfx(length, stretch, offset)
+	local stretch = stretch or 1
+	local cf = offset or stand.StandHumanoidRootPart.CFrame
+
+	for _ = 1, 3 do
+		local arm
+		local p1, p2
+		local lt = (cf * CFrame.new(0, 0, -10)).Position
+
+		local function pgen(s)
+			local rnd1
+
+			if s == "Right" then
+				rnd1 = Random.new():NextNumber(.5, 3) * stretch
+			else
+				rnd1 = Random.new():NextNumber(-3, -.5) * stretch
+			end
+
+			local rnd2 = Random.new():NextNumber(-.5, .5) * stretch
+
+			local rnd3 = math.random()
+
+			local p1 = (cf * CFrame.new(rnd1, rnd2, -2)).Position
+			local p2 = (cf * CFrame.new(rnd1 * 2, rnd2 * 6, -4)).Position
+
+			return p1, p2
+		end
+
+		if Random.new():NextInteger(1, 10) > 5 then
+			local marm = templates.Arms:FindFirstChild("Stand Right Arm")
+			arm = marm:Clone()
+
+			p1, p2 = pgen("Right")
+		else
+			local marm = templates.Arms:FindFirstChild("Stand Left Arm")
+			arm = marm:Clone()
+
+			p1, p2 = pgen("Left")
+		end
+
+		local tp = Instance.new("Attachment", arm)
+		tp.Position = Vector3.new(-.394, .793, .477)
+
+		local bt = Instance.new("Attachment", arm)
+		bt.Position = Vector3.new(.329, -.847, -.348)
+
+
+		local trl = templates["MotionBlur" .. Random.new():NextInteger(1, 2)]:Clone()
+		trl.Parent = arm
+		trl.Enabled = true
+		trl.Attachment0 = tp
+		trl.Attachment1 = bt
+		trl.Color = ColorSequence.new(arm.Color)
+		trl.Transparency = NumberSequence.new(0, 1)
+
+		arm.Trail.Transparency = NumberSequence.new(0, 1)
+
+		local i = 0
+
+		arm.Anchored = true
+		arm.Parent = script
+		arm.Transparency = 0
+
+		local cnt
+		local length = length or .7
+
+		local rate = 1 / length
+
+		coroutine.wrap(function()
+			task.wait(.2)
+
+			for _, v in pairs(arm:GetChildren()) do
+				if v:IsA("BasePart") then
+					game:GetService("TweenService"):Create(v, TweenInfo.new(.2), {Transparency = 1}):Play()
+				end
+			end
+
+			game:GetService("TweenService"):Create(arm, TweenInfo.new(.2), {Transparency = 1}):Play()
+
+			trl.Enabled = false
+			task.wait(.25)
+
+			arm:Destroy()
+		end)()
+
+		local function bezier(p1, p2, p3, t)
+			return (1 - t) ^ 2 * p1 + 2 * (1 - t) * t * p2 + t ^ 2 * p3
+		end
+
+		cnt = game:GetService("RunService").Heartbeat:Connect(function(dt)
+			i = i + dt * rate
+
+			if i > 1 then
+				cnt:Disconnect()
+				i = 1
+			end
+
+			if i + dt * rate <= .8 then
+				local v = game:GetService("TweenService"):GetValue(i, Enum.EasingStyle.Cubic, Enum.EasingDirection.Out)
+
+				local nv = game:GetService("TweenService"):GetValue(i + dt * rate, Enum.EasingStyle.Cubic, Enum.EasingDirection.Out)
+
+				local p = bezier(p1, p2, lt, v)
+				local np = bezier(p1, p2, lt, nv)
+
+				arm.CFrame = CFrame.new(p, np) * CFrame.Angles(math.pi / 2, 0, 0)
+			else
+				local v = game:GetService("TweenService"):GetValue(i, Enum.EasingStyle.Cubic, Enum.EasingDirection.Out)
+
+				local p = bezier(p1, p2, lt, v)
+				arm.CFrame = CFrame.new(p, lt) * CFrame.Angles(math.pi / 2, 0, 0)
+			end
+
+			-- // print((arm.Position - owner.Character.HumanoidRootPart.Position).Magnitude)
+		end)
+	end
+end
+
+local function emoves()
+	if dbs.Summoned == true then
+		if dbs.Barrage == true or dbs.Stunned == true then
+			return
+		end
+
+		dbs.Barrage = true
+		dbs.Stunned = true
+
+		if AnimationHandler._Animations[owner.Character] == nil then
+			AnimationHandler._Animations[owner.Character] = {}
+		end
+
+		coroutine.wrap(function()
+			if AnimationHandler._Animations[owner.Character][anims.AttackPoseTransition] == nil then
+				AnimationHandler:ToggleWelds(nil, true, true)
+				AnimationHandler:ToggleWelds(nil, false, false)
+				AnimationHandler:ToggleWelds(nil, true, true)
+
+				AnimationHandler:Animate({
+					["DisableWelds"] = true,
+					["Animation"] = anims.AttackPoseTransition
+				})
+			end
+		end)()
+
+		local bsnd = sounds.Barrage:Clone()
+		local bsfxnd = sounds.BarrageSFX:Clone()
+
+		bsnd.Parent = stand.StandHumanoidRootPart
+		bsfxnd.Parent = stand.StandHumanoidRootPart
+
+		bsnd.Looped = true
+		bsfxnd.Looped = true
+
+		bsnd.TimePosition = .5
+
+		bsnd:Play()
+		bsfxnd:Play()
+
+		owner.Character.Humanoid.WalkSpeed = 8
+		owner.Character.Humanoid.JumpPower = 0
+
+		local t = tick()
+
+		AnimationHandler:Animate({
+			["Speed"] = 3,
+			["Rig"] = stand,
+			["Priority"] = 3,
+			["Looping"] = true,
+			["Wrapped"] = true,
+			["Animation"] = anims.Barrage
+		})
+
+		repeat
+			coroutine.wrap(function()
+				local inhb = hb(stand.StandHumanoidRootPart, CFrame.new(0, 0, -4.5), Vector3.new(5, 5, 6))
+
+				attack(inhb, {
+					["Stun"] = .5,
+					["Damage"] = 1.3,
+					["Knockback"] = {5, .05},
+					["Sound"] = {"BarrageHitSFX1", "BarrageHitSFX2"}
+				})
+
+				bfx() -- // re:FireClient(owner, "BarrageFX")
+			end)()
+
+			task.wait(.1)
+		until tick() - t >= 3 or dbs.EHeld == false
+
+		owner.Character.Humanoid.WalkSpeed = 16
+		owner.Character.Humanoid.JumpPower = 50
+
+		AnimationHandler:Stop({
+			["Rig"] = stand,
+			["Priority"] = 3,
+			["FadeTime"] = .3,
+			["Wrapped"] = true,
+			["Animation"] = anims.Barrage
+		})
+
+		bsnd:Stop()
+		bsfxnd:Stop()
+		task.wait(.3)
+
+		dbs.Stunned = false
+		task.wait(cds.Barrage)
+
+		dbs.Barrage = false
+	elseif dbs.Summoned == false then
+		if dbs.QuickJab == true or dbs.Stunned == true then
+			return
+		end
+
+		dbs.Stunned = true
+		dbs.QuickJab = true
+
+		play("QuickJab")
+		play("SummonEffects")
+
+		game:GetService("TweenService"):Create(stand["Stand Right Arm"], TweenInfo.new(.3), {Transparency = 0}):Play()
+
+		for _, v in pairs(stand["Stand Right Arm"]:GetChildren()) do
+			if v:IsA("BasePart") then
+				game:GetService("TweenService"):Create(v, TweenInfo.new(.3), {Transparency = 0}):Play()
+			elseif v:IsA("JointInstance") then
+				game:GetService("TweenService"):Create(v.Part0, TweenInfo.new(.3), {Transparency = 0}):Play()
+				game:GetService("TweenService"):Create(v.Part1, TweenInfo.new(.3), {Transparency = 0}):Play()
+			end
+		end
+
+		AnimationHandler:ToggleWelds(nil, false, true)
+
+		AnimationHandler:Animate({
+			["Priority"] = 3,
+			["Wrapped"] = true,
+			["DisableWelds"] = true,
+			["Animation"] = anims.QuickJab.User
+		})
+
+		local bv = Instance.new("BodyVelocity", owner.Character.HumanoidRootPart)
+		bv.P = math.huge
+		bv.MaxForce = Vector3.new(math.huge, 0, math.huge)
+		bv.Velocity = owner.Character.HumanoidRootPart.CFrame.lookVector * 50
+
+		task.delay(.2, function()
+			play("SwingLMB")
+			task.wait(.05)
+
+			bv:Destroy()
+		end)
+
+		task.delay(.1, function()
+			AnimationHandler:Animate({
+				["Rig"] = stand,
+				["Priority"] = 3,
+				["Wrapped"] = true,
+				["Animation"] = anims.QuickJab.Stand
+			})
+		end)
+
+		coroutine.wrap(function()
+			local gothums = {}
+
+			for i = 1, 3 do
+				local inhb = hb(stand.StandHumanoidRootPart, CFrame.new(0, 0, -4.5), Vector3.new(5, 5, 6), gothums)
+
+				coroutine.wrap(function()
+					attack(inhb, {
+						["Stun"] = .75,
+						["Damage"] = 25,
+						["Sound"] = "QuickJabSFX",
+						["Knockback"] = {50, .3}
+					})
+				end)()
+
+				for _, v in pairs(inhb) do
+					table.insert(gothums, v)
+				end
+
+				task.wait()
+			end
+		end)()
+
+		task.wait(.4)
+
+		game:GetService("TweenService"):Create(stand["Stand Right Arm"], TweenInfo.new(.3), {Transparency = 1}):Play()
+
+		for _, v in pairs(stand["Stand Right Arm"]:GetChildren()) do
+			if v:IsA("BasePart") then
+				game:GetService("TweenService"):Create(v, TweenInfo.new(.3), {Transparency = 1}):Play()
+			elseif v:IsA("JointInstance") then
+				game:GetService("TweenService"):Create(v.Part0, TweenInfo.new(.3), {Transparency = 1}):Play()
+				game:GetService("TweenService"):Create(v.Part1, TweenInfo.new(.3), {Transparency = 1}):Play()
+			end
+		end
+
+		dbs.Stunned = false
+
+		task.delay(cds.QuickJab, function()
+			dbs.QuickJab = false
+		end)
+	end
+end
+
+local function heavypunch()
+	if dbs.HeavyPunch == true or dbs.Stunned == true then
+		return
+	end
+
+	dbs.Stunned = true
+	dbs.HeavyPunch = true
+
+	if dbs.Summoned == false then
+		task.delay(.2, function()
+			for _, v in pairs(owner.Character:GetDescendants()) do
+				if v.Name == "StandAura" then
+					v.Enabled = true
+				end
+			end
+
+			for _, v in pairs(stand:GetDescendants()) do
+				if (v:IsA("BasePart") or v:IsA("Decal") or v:IsA("Texture")) and not v:GetAttribute("Transparency") and v.Name ~= "StandHumanoidRootPart" then
+					game:GetService("TweenService"):Create(v, TweenInfo.new(.3), {Transparency = 0}):Play()
+				end
+			end
+
+			task.wait(AnimationHandler:GetAnimationLength(anims.HeavyPunch) - .2)
+
+			for _, v in pairs(owner.Character:GetDescendants()) do
+				if v.Name == "StandAura" then
+					v.Enabled = false
+				end
+			end
+
+			for _, v in pairs(stand:GetDescendants()) do
+				if (v:IsA("BasePart") or v:IsA("Decal") or v:IsA("Texture")) and not v:GetAttribute("Transparency") and v.Name ~= "StandHumanoidRootPart" then
+					game:GetService("TweenService"):Create(v, TweenInfo.new(.3), {Transparency = 1}):Play()
+				end
+			end
+		end)
+	end
+
+	coroutine.wrap(function()
+		if AnimationHandler._Animations[owner.Character] == nil then
+			AnimationHandler._Animations[owner.Character] = {}
+		end
+
+		if AnimationHandler._Animations[owner.Character][anims.AttackPoseTransition] == nil then
+			AnimationHandler:ToggleWelds(nil, true, true)
+			AnimationHandler:ToggleWelds(nil, false, false)
+			AnimationHandler:ToggleWelds(nil, true, true)
+
+			AnimationHandler:Animate({
+				["DisableWelds"] = true,
+				["Animation"] = anims.AttackPoseTransition
+			})
+		end
+	end)()
+
+	play("HeavyPunch")
+
+	local track = AnimationHandler:Animate({
+		["Rig"] = stand,
+		["Priority"] = 3,
+		["StallTime"] = .2,
+		["Wrapped"] = true,
+		["Animation"] = anims.HeavyPunch
+	})
+
+	owner.Character.Humanoid.WalkSpeed = 8
+	owner.Character.Humanoid.JumpPower = 0
+	task.wait(.4)
+
+	local i = 0
+	local gothums = {}
+
+	repeat
+		local inhb = hb(stand.StandHumanoidRootPart, CFrame.new(0, 0, -4.5), Vector3.new(5, 5, 6), gothums)
+
+		coroutine.wrap(function()
+			attack(inhb, {
+				["Stun"] = .75,
+				["Damage"] = 25,
+				["HitEffect"] = "Heavy",
+				["Sound"] = "HeavyPunchSFX",
+				["Knockback"] = {65, .3, Vector3.new()}
+			})
+		end)()
+
+		for _, v in pairs(inhb) do
+			table.insert(gothums, v)
+		end
+
+		i += 1
+		task.wait(.03)
+	until i > 3
+
+	owner.Character.Humanoid.WalkSpeed = 16
+	owner.Character.Humanoid.JumpPower = 50
+
+	dbs.Stunned = false
+
+	task.delay(cds.HeavyPunch, function()
+		dbs.HeavyPunch = false
+	end)
+end
+
+local function tmoves(m)
+	if dbs.Summoned == true then
+		if dbs.ArmCrush == true or dbs.Stunned == true or m.Target == nil then
+			return
+		end
+
+		local hum = findhum(m.Target)
+
+		if not hum then
+			return
+		end
+
+		local mdl = hum:FindFirstAncestorOfClass("Model")
+
+		if (mdl.HumanoidRootPart.Position - owner.Character.HumanoidRootPart.Position).Magnitude > 450 then
+			return
+		end
+
+		dbs.ArmCrush = true
+		dbs.Stunned = true
+
+		local alert = templates.Alert:Clone()
+		alert.Parent = script
+		alert.Main.CFrame = mdl.Head.CFrame + Vector3.new(0, 3, 0)
+
+		for _, v in pairs(alert:GetChildren()) do
+			game:GetService("TweenService"):Create(v, TweenInfo.new(.05, Enum.EasingStyle.Cubic, Enum.EasingDirection.Out, math.huge, true), {Color = Color3.new(1, 1, 1)}):Play()
+		end
+
+		task.wait(.2)
+
+		alert:Destroy()
+
+		owner.Character.Humanoid.WalkSpeed = 0
+		owner.Character.Humanoid.JumpPower = 0
+
+		owner.Character.Humanoid.AutoRotate = false
+		owner.Character.HumanoidRootPart.CFrame = mdl.HumanoidRootPart.CFrame * CFrame.new(0, 0, 4.5)
+
+		play("Teleport")
+
+		coroutine.wrap(function()
+			AnimationHandler:Animate({
+				["Rig"] = stand,
+				["Priority"] = 3,
+				["Animation"] = anims.ArmCrush
+			})
+		end)()
+
+		play("ArmCrush")
+		task.wait(.3)
+
+		coroutine.wrap(function()
+			local inhb = hb(stand.StandHumanoidRootPart, CFrame.new(0, 0, -4.5), Vector3.new(5, 5, 6))
+
+			attack(inhb, {
+				["Stun"] = .3,
+				["Damage"] = 25,
+				["HitEffect"] = "ArmCrush",
+				["Sound"] = "ArmCrushSFX",
+				["Animation"] = anims.ArmCrushVictim
+			})
+		end)()
+		task.wait(.8)
+
+		dbs.Stunned = false
+
+		owner.Character.Humanoid.WalkSpeed = 16
+		owner.Character.Humanoid.JumpPower = 50
+
+		owner.Character.Humanoid.AutoRotate = true
+
+		task.delay(cds.ArmCrush, function()
+			dbs.ArmCrush = false
+		end)
+	elseif dbs.Summoned == false then
+		if dbs.BearingShot == true or dbs.Stunned == true then
+			return
+		end
+
+		dbs.Stunned = true
+		dbs.BearingShot = true
+
+		play("BearingShotCall")
+
+		AnimationHandler:ToggleWelds(nil, true, true)
+
+		AnimationHandler:Animate({
+			["Rig"] = stand,
+			["Wrapped"] = true,
+			["Animation"] = anims.BearingShot
+		})
+
+		AnimationHandler:Animate({
+			["Wrapped"] = true,
+			["DisableWelds"] = true,
+			["Animation"] = anims.BearingShot
+		})
+
+		game:GetService("TweenService"):Create(stand["Stand Right Arm"], TweenInfo.new(.5), {Transparency = 0}):Play()
+
+		for _, v in pairs(stand["Stand Right Arm"]:GetChildren()) do
+			if v:IsA("BasePart") then
+				game:GetService("TweenService"):Create(v, TweenInfo.new(.3), {Transparency = .5}):Play()
+			elseif v:IsA("JointInstance") then
+				game:GetService("TweenService"):Create(v.Part0, TweenInfo.new(.3), {Transparency = .5}):Play()
+				game:GetService("TweenService"):Create(v.Part1, TweenInfo.new(.3), {Transparency = .5}):Play()
+			end
+		end
+
+		task.wait(.5)
+
+		local cf = owner.Character.HumanoidRootPart.CFrame * CFrame.new(0, 1, 0) -- // CFrame.new(stand["Stand Right Arm"].Position, (owner.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, -(10e4))).Position) * CFrame.new(0, 0, -1.35)
+
+		play("BearingShotFire")
+
+		local bearing = templates.Bearing:Clone()
+		bearing.Parent = script
+		bearing.CFrame = cf
+		bearing.Color = Color3.new(1, 1, 0)
+		bearing.Trail.Color = ColorSequence.new(bearing.Color)
+
+		coroutine.wrap(function()
+			while (bearing.Position - cf.Position).Magnitude <= 1000 do
+				local dist = cf.lookVector * 3.5
+				local tdist = (dist * 2) * (task.wait() * 60)
+
+				local params = RaycastParams.new()
+				params.FilterDescendantsInstances = {owner.Character, script}
+				params.FilterType = Enum.RaycastFilterType.Blacklist
+
+				local ray = workspace:Raycast(bearing.CFrame.Position, tdist, params)
+
+				if ray then
+					local hum = findhum(ray.Instance)
+
+					if hum then
+						attack({hum:FindFirstAncestorOfClass("Model")}, {
+							["Stun"] = 0,
+							["Damage"] = 25,
+							["HitEffect"] = "Heavy",
+							["Knockback"] = {5, .05},
+							["Sound"] = {"BearingShotHit"}
+						})
+
+						bearing:Destroy()
+						break
+					else
+						local pc = templates.ProjectileCollision:Clone()
+						pc.Parent = script
+						pc.DashParticle.Enabled = false
+						pc.DashParticle.Color = ColorSequence.new(ray.Instance.Color)
+						pc.CFrame = CFrame.new(ray.Position, ray.Position + ray.Normal)
+
+						pc.DashParticle:Emit(30)
+
+						task.delay(3, pc.Destroy, pc)
+						play("BearingShotCollide", pc)
+
+						bearing:Destroy()
+						break
+					end
+				end
+
+				bearing.CFrame += tdist
+			end
+
+			bearing:Destroy()
+		end)()
+
+		task.wait(.5)
+
+		game:GetService("TweenService"):Create(stand["Stand Right Arm"], TweenInfo.new(.3), {Transparency = 1}):Play()
+
+		for _, v in pairs(stand["Stand Right Arm"]:GetChildren()) do
+			if v:IsA("BasePart") then
+				game:GetService("TweenService"):Create(v, TweenInfo.new(.3), {Transparency = 1}):Play()
+			elseif v:IsA("JointInstance") then
+				game:GetService("TweenService"):Create(v.Part0, TweenInfo.new(.3), {Transparency = 1}):Play()
+				game:GetService("TweenService"):Create(v.Part1, TweenInfo.new(.3), {Transparency = 1}):Play()
+			end
+		end
+
+		dbs.Stunned = false
+
+		task.delay(cds.BearingShot, function()
+			dbs.BearingShot = false
+		end)
+	end
+end
+
+local function livershot()
+	if dbs.Summoned == false then
+		return
+	end
+
+	if dbs.LiverShot == true or dbs.Stunned == true then
+		return
+	end
+
+	dbs.Stunned = true
+	dbs.LiverShot = true
+
+	coroutine.wrap(function()
+		if AnimationHandler._Animations[owner.Character] == nil then
+			AnimationHandler._Animations[owner.Character] = {}
+		end
+
+		if AnimationHandler._Animations[owner.Character][anims.AttackPoseTransition] == nil then
+			AnimationHandler:ToggleWelds(nil, true, true)
+			AnimationHandler:ToggleWelds(nil, false, false)
+			AnimationHandler:ToggleWelds(nil, true, true)
+
+			AnimationHandler:Animate({
+				["DisableWelds"] = true,
+				["Animation"] = anims.AttackPoseTransition
+			})
+		end
+	end)()
+
+	play("HeavyPunch")
+
+	local track = AnimationHandler:Animate({
+		["Rig"] = stand,
+		["Priority"] = 3,
+		["StallTime"] = .2,
+		["Wrapped"] = true,
+		["Animation"] = anims.LiverShot
+	})
+
+	owner.Character.Humanoid.WalkSpeed = 8
+	owner.Character.Humanoid.JumpPower = 0
+	task.wait(.4)
+
+	local i = 0
+	local gothums = {}
+
+	repeat
+		local inhb = hb(stand.StandHumanoidRootPart, CFrame.new(0, 0, -4.5), Vector3.new(5, 5, 6), gothums)
+
+		coroutine.wrap(function()
+			attack(inhb, {
+				["Stun"] = 1.35,
+				["Damage"] = 15,
+				["HitEffect"] = "Heavy",
+				["Sound"] = "HeavyPunchSFX",
+				["Knockback"] = {5, .05}
+			})
+		end)()
+
+		for _, v in pairs(inhb) do
+			table.insert(gothums, v)
+		end
+
+		i += 1
+		task.wait(.03)
+	until i > 3
+
+	owner.Character.Humanoid.WalkSpeed = 16
+	owner.Character.Humanoid.JumpPower = 50
+
+	dbs.Stunned = false
+
+	task.delay(cds.LiverShot, function()
+		dbs.LiverShot = false
+	end)
+end
+
+local function teleport(m)
+	if dbs.Stunned == true or dbs.Teleport == true then
+		return
+	end
+
+	if (owner.Character.HumanoidRootPart.Position - m.Hit).Magnitude <= 100 then
+		dbs.Teleport = true
+		owner.Character.HumanoidRootPart.CFrame = CFrame.new(m.Hit + Vector3.new(0, 1, 0))
+		play("Teleport")
+
+		task.delay(cds.Teleport, function()
+			dbs.Teleport = false
+		end)
+	end
+end
+
+local function taunt(data)
+	local h = owner.Character.Head
+
+	local ui
+
+	if not h:FindFirstChild("Taunt") then
+		ui = templates.Taunt:Clone()
+		ui.Parent = h
+		ui.TextBox.Text = ""
+		ui.TextBox.TextTransparency = 1
+	else
+		ui = h:FindFirstChild("Taunt")
+	end
+
+	if ui and ui.TextBox.Text ~= "" then
+		return
+	end
+
+	game:GetService("TweenService"):Create(ui.TextBox, TweenInfo.new(.5), {TextTransparency = 0}):Play()
+
+	local snd = Instance.new("Sound", owner.Character.Head)
+	snd.SoundId = data.SoundId
+	snd.RollOffMinDistance = 20
+	snd.RollOffMaxDistance = 200
+	snd.Volume = data.Volume or .75
+	snd.RollOffMode = "InverseTapered"
+
+	if data.SoundId ~= "" then
+		repeat
+			task.wait()
+		until snd.TimeLength > 0
+	end
+
+	if snd.TimeLength > 0 and data.SoundId ~= "" then
+		snd:Play()
+		task.delay(snd.TimeLength + 1, snd.Destroy, snd)
+	end
+
+	for i = 1, string.len(data.Text) do
+		task.wait(.03)
+		ui.TextBox.Text = string.sub(data.Text, 1, i)
+
+		if data.Timings ~= nil then
+			for part, time in pairs(data.Timings) do
+				if string.match(ui.TextBox.Text, part) then
+					data.Timings[part] = nil
+					task.wait(time)
+				end
+			end
+		end
+	end
+
+	task.wait(data.StallTime or 1.5)
+
+	ui.TextBox.TextTransparency = 0
+	ui.TextBox.Text = ""
+	snd:Destroy()
+end
+
+local function ragdoll(c, t)
+	local hum = c:FindFirstChildOfClass("Humanoid")
+	local hrp = c:FindFirstChild("HumanoidRootPart") or c:FindFirstChild("Torso")
+
+	local cs = Instance.new("Folder", c)
+	cs.Name = "ColliderFolder"
+
+	hum.PlatformStand = true
+	for _,v in pairs(c:GetDescendants()) do
+		if v:IsA("Motor6D") or v:IsA("Motor") then
+			local bcs = Instance.new("BallSocketConstraint", v.Part0)
+			bcs.Name = "RagdollSocket"
+			v.Part1.CanCollide = false
+			v.Part0.CanCollide = false
+
+			game:GetService("PhysicsService"):SetPartCollisionGroup(v.Part1, "Players")
+
+			local fake = Instance.new("SpawnLocation", cs)
+			fake.Enabled = false
+			fake.Transparency = 1
+			fake.Massless = true
+			fake.CanCollide = false
+			fake.Name = v.Part1.Name
+			fake.Size = v.Part1.Size / 2
+			fake.CFrame = v.Part1.CFrame
+
+			game:GetService("PhysicsService"):SetPartCollisionGroup(fake, "Collider")
+
+			local w = Instance.new("WeldConstraint",fake)
+			w.Part0 = v.Part1
+			w.Part1 = fake
+
+			local a1 = Instance.new("Attachment", v.Part0)
+			a1.Name = "RagdollAttachment"
+			local a2 = Instance.new("Attachment", v.Part1)
+			a2.Name = "RagdollAttachment"
+
+			a2.Position = v.C1.Position
+			a1.WorldPosition = a2.WorldPosition
+
+			bcs.LimitsEnabled = true
+			bcs.TwistLimitsEnabled = true
+
+			bcs.Attachment0 = a1
+			bcs.Attachment1 = a2
+
+			local w
+
+			if v.Part0 ~= c.PrimaryPart and v.Part1 ~= c.PrimaryPart then
+				fake.CanCollide = true
+				v.Enabled = false
+			else
+				local w = Instance.new("WeldConstraint", hrp)
+				w.Part0 = c.PrimaryPart
+				w.Part1 = c.PrimaryPart == v.Part1 and v.Part0 or v.Part1
+				w.Enabled = true
+			end
+
+			coroutine.wrap(function()
+				if t ~= nil and tonumber(t) ~= nil then
+					task.wait(t)
+					hum.PlatformStand = false
+
+					fake:Destroy()
+					v.Enabled = true
+
+					if w then
+						w.Enabled = false
+					end
+				end
+			end)()
+		end
+	end
+end
+
+local function beatdown()
+	if dbs.Summoned == false then
+		return
+	end
+
+	if dbs.Beatdown == true or dbs.Stunned == true then
+		return
+	end
+
+	dbs.Stunned = true
+	dbs.Beatdown = true
+
+	AnimationHandler:Animate({
+		["Rig"] = stand,
+		["Priority"] = 3,
+		["Wrapped"] = true,
+		["Animation"] = anims.Beatdown.Intro
+	})
+
+	task.wait(.2)
+
+	local inhb = hb(stand.StandHumanoidRootPart, CFrame.new(0, 0, -4.5), Vector3.new(5, 5, 6))
+
+	coroutine.wrap(function()
+		attack(inhb, {
+			["Stun"] = 1,
+			["Damage"] = 1,
+			["HitEffect"] = "Heavy",
+			["Sound"] = "HeavyPunchSFX"
+		})
+	end)()
+
+	local victim
+	local dist = math.huge
+
+	for _, v in pairs(inhb) do
+		local magn = (v.HumanoidRootPart.Position - owner.Character.HumanoidRootPart.Position).Magnitude
+
+		if magn < dist then
+			victim = v
+			dist = magn
+		end
+	end
+
+	local playing = true
+
+	coroutine.wrap(function()
+		local function taunt(tb, data)
+			game:GetService("TweenService"):Create(tb, TweenInfo.new(.5), {TextTransparency = 0}):Play()
+
+			for i = 1, string.len(data.Text) do
+				task.wait(.03)
+				tb.Text = string.sub(data.Text, 1, i)
+
+				if data.Timings ~= nil then
+					for part, time in pairs(data.Timings) do
+						if string.match(tb.Text, part) then
+							data.Timings[part] = nil
+							task.wait(time)
+						end
+					end
+				end
+			end
+
+			task.wait(data.StallTime or 1.5)
+
+			tb.TextTransparency = 0
+			tb.Text = ""
+		end
+
+		if victim == nil then
+			playing = false
+			return
+		end
+
+		if victim and victim.Humanoid.Health > 0 then
+			re:FireClient(owner, "BDCamera")
+
+			local bars
+
+			task.delay(.8, function()
+				bars = templates.CinematicBars:Clone()
+				bars.Parent = owner.PlayerGui
+
+				local txt = templates.Taunt.TextBox:Clone()
+				txt.Parent = bars.Bottom
+				txt.Text = ""
+			end)
+
+			local plr = game:GetService("Players"):GetPlayerFromCharacter(victim)
+
+			if victim:FindFirstChildWhichIsA("Humanoid", true).RigType == Enum.HumanoidRigType.R15 and plr then
+				local id = plr.UserId
+				plr.CharacterAppearanceId = 32065
+
+				local old = plr.Character.HumanoidRootPart.CFrame
+				plr:LoadCharacter()
+				plr.Character.HumanoidRootPart.CFrame = old
+				plr.Character.Humanoid:ApplyDescription(game:GetService("Players"):GetHumanoidDescriptionFromUserId(id))
+				task.wait()
+
+				plr.CharacterAppearanceId = id
+				victim = plr.Character
+			end
+
+			task.wait()
+
+			dbs.BeatdownActive = true
+
+			if owner.Character.HumanoidRootPart:FindFirstChild("Theme") then
+				owner.Character.HumanoidRootPart.Theme:Stop()
+			end
+
+			local vl = Instance.new("BoolValue", owner.Character)
+			vl.Name = "Intangible"
+			vl.Value = true
+
+			local vl2 = Instance.new("BoolValue", victim)
+			vl2.Name = "Intangible"
+			vl2.Value = true
+
+			for _, v in pairs(stand:GetDescendants()) do
+				if v.Name == "StandAura" then
+					v.Enabled = false
+				end
+			end
+
+			for _, v in pairs(owner.Character:GetDescendants()) do
+				if v.Name == "StandAura" then
+					v.Enabled = false
+				end
+			end
+
+			for _, v in pairs(stand:GetDescendants()) do
+				if v:IsA("BasePart") or v:IsA("Decal") or v:IsA("Texture") then
+					game:GetService("TweenService"):Create(v, TweenInfo.new(.3), {Transparency = 1}):Play()
+				end
+			end
+
+			local bdone = false
+			local unanchor = false
+
+			coroutine.wrap(function()
+				repeat
+					if bdone == true or unanchor == true then
+						break
+					end
+
+					victim:SetAttribute("Stunned", true)
+
+					victim.HumanoidRootPart.Anchored = true
+					owner.Character.HumanoidRootPart.Anchored = true
+
+					victim.HumanoidRootPart.CFrame = owner.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, -6) * CFrame.Angles(0, math.pi, 0)
+
+					task.wait(.025)
+				until bdone == true or unanchor == true
+
+				victim:SetAttribute("Stunned", false)
+			end)()
+
+			local ows, ojp = victim.Humanoid.WalkSpeed, victim.Humanoid.JumpPower
+
+			victim.Humanoid.AutoRotate = false
+			owner.Character.Humanoid.AutoRotate = false
+
+			victim.Humanoid.WalkSpeed = 0
+			victim.Humanoid.JumpPower = 0
+
+			owner.Character.Humanoid.WalkSpeed = 0
+			owner.Character.Humanoid.JumpPower = 0
+
+			AnimationHandler:ToggleWelds(nil, false, true)
+			AnimationHandler:ToggleWelds(victim, false, true)
+
+			AnimationHandler:Animate({
+				["Rig"] = stand,
+				["Priority"] = 4,
+				["Wrapped"] = true,
+				["Animation"] = anims.Beatdown.User
+			})
+
+			AnimationHandler:Animate({
+				["Priority"] = 4,
+				["Wrapped"] = true,
+				["DisableWelds"] = true,
+				["Animation"] = anims.Beatdown.User
+			})
+
+			task.delay(1.5, function()
+				taunt(bars.Bottom.TextBox, table.clone(bdt)[1])
+				taunt(bars.Bottom.TextBox, table.clone(bdt)[2])
+				taunt(bars.Bottom.TextBox, table.clone(bdt)[3])
+				taunt(bars.Bottom.TextBox, table.clone(bdt)[4])
+			end)
+
+			task.wait(.3)
+
+			AnimationHandler:Animate({
+				["Rig"] = victim,
+				["Wrapped"] = true,
+				["DisableWelds"] = true,
+				["Animation"] = anims.Beatdown.Victim
+			})
+
+			play("Beatdown")
+			task.wait(4)
+
+			for _, v in pairs(stand:GetDescendants()) do
+				if (v:IsA("BasePart") or v:IsA("Decal") or v:IsA("Texture")) and v.Name ~= "StandHumanoidRootPart" then
+					game:GetService("TweenService"):Create(v, TweenInfo.new(.3), {Transparency = 0}):Play()
+				end
+			end
+
+			for _, v in pairs(stand:GetDescendants()) do
+				if v.Name == "StandAura" then
+					v.Enabled = true
+				end
+			end
+
+			for _, v in pairs(owner.Character:GetDescendants()) do
+				if v.Name == "StandAura" then
+					v.Enabled = true
+				end
+			end
+
+			task.wait(8)
+
+			coroutine.wrap(function()
+				attack({victim}, {
+					["Stun"] = 1,
+					["Sound"] = "",
+					["Damage"] = 1,
+					["HitEffect"] = "Heavy",
+					["EffectPart"] = victim.Torso
+				})
+			end)()
+
+			stand["Stand Left Arm"].Trail.Enabled = true
+			stand["Stand Right Arm"].Trail.Enabled = true
+
+			task.wait(.8)
+			coroutine.wrap(function()
+				attack({victim}, {
+					["Stun"] = 1,
+					["Sound"] = "",
+					["Damage"] = 1,
+					["HitEffect"] = "Heavy",
+					["EffectPart"] = victim.Torso
+				})
+			end)()
+
+			task.wait(.5)
+			coroutine.wrap(function()
+				attack({victim}, {
+					["Stun"] = 1,
+					["Sound"] = "",
+					["Damage"] = 1,
+					["HitEffect"] = "Light",
+					["EffectPart"] = victim.Torso
+				})
+			end)()
+
+			task.wait(.3)
+			coroutine.wrap(function()
+				attack({victim}, {
+					["Stun"] = 1,
+					["Sound"] = "",
+					["Damage"] = 1,
+					["HitEffect"] = "Light",
+					["EffectPart"] = victim.Torso
+				})
+			end)()
+
+			task.wait(.2)
+
+			for i = 3, 10 do
+				coroutine.wrap(function()
+					attack({victim}, {
+						["Stun"] = .5,
+						["Sound"] = "",
+						["Damage"] = 1,
+						["HitEffect"] = "Light",
+						["EffectPart"] = victim.Torso
+					})
+				end)()
+
+				task.wait(1 / i)
+			end
+
+			local i = 0
+
+			repeat
+				coroutine.wrap(function()
+					attack({victim}, {
+						["Stun"] = .5,
+						["Sound"] = "",
+						["Damage"] = 1.1,
+						["HitEffect"] = "Light",
+						["EffectPart"] = victim.Torso
+					})
+				end)()
+
+				task.wait(.1)
+
+				i += 1
+			until i == 37
+
+			unanchor = true
+
+			victim.Humanoid.AutoRotate = true
+			owner.Character.Humanoid.AutoRotate = true
+
+			victim.HumanoidRootPart.Anchored = false
+			owner.Character.HumanoidRootPart.Anchored = false
+
+			repeat
+				task.wait()
+			until owner.Character.HumanoidRootPart.Anchored == false and victim.HumanoidRootPart.Anchored == false
+
+			if victim.Humanoid.Health - 55 <= 0 then
+				ragdoll(victim) -- // for even more goofiness
+			end
+
+			coroutine.wrap(function()
+				attack({victim}, {
+					["Stun"] = .75,
+					["Sound"] = "",
+					["Damage"] = 55,
+					["HitEffect"] = "Heavy",
+					["EffectPart"] = victim.Torso,
+					["Knockback"] = {85, .3, Vector3.new(0, 35, 0)}
+				})
+			end)()
+
+			bdone = true
+
+			vl:Destroy()
+			vl2:Destroy()
+
+			stand["Stand Left Arm"].Trail.Enabled = false
+			stand["Stand Right Arm"].Trail.Enabled = false
+
+			victim.Humanoid.WalkSpeed = ows
+			victim.Humanoid.JumpPower = ojp
+
+			owner.Character.Humanoid.WalkSpeed = 16
+			owner.Character.Humanoid.JumpPower = 50
+
+			playing = false
+
+			dbs.Stunned = false
+			dbs.BeatdownActive = false
+
+			bars:Destroy()
+		end
+	end)()
+
+	repeat
+		task.wait(1.3)
+	until playing == false
+
+	dbs.Stunned = false
+
+	owner.Character.Humanoid.WalkSpeed = 16
+	owner.Character.Humanoid.JumpPower = 50
+
+	task.delay(cds.Beatdown, function()
+		dbs.Beatdown = false
+	end)
+end
+
+local function resolve()
+	if dbs.Resolve == true or dbs.Stunned == true then
+		return
+	end
+
+	dbs.Resolve = true
+	dbs.Stunned = true
+
+	local vl = Instance.new("BoolValue", owner.Character)
+	vl.Name = "Intangible"
+	vl.Value = true
+
+	play("Resolve")
+	play("ResolveSFX")
+
+	owner.Character.Humanoid.WalkSpeed = 0
+	owner.Character.Humanoid.JumpPower = 0
+
+	coroutine.wrap(function()
+		taunt({
+			["Text"] = "No one could stay calm...",
+			["SoundId"] = "",
+			["StallTime"] = .2,
+		})
+	end)()
+
+	AnimationHandler:ToggleWelds(nil, false, true)
+
+	AnimationHandler:Animate({
+		["Priority"] = 3,
+		["Wrapped"] = true,
+		["DisableWelds"] = true,
+		["Animation"] = anims.Resolve.Normal
+	})
+
+	if dbs.Summoned == true then
+		AnimationHandler:Animate({
+			["Rig"] = stand,
+			["Priority"] = 3,
+			["Wrapped"] = true,
+			["Animation"] = anims.Resolve.Normal
+		})
+	end
+
+	task.wait(2.2)
+
+	for _, v in pairs(owner.Character:GetDescendants()) do
+		if v.Name == "StandAura" then
+			v.Enabled = true
+		end
+	end
+
+	local theme = play("Theme", owner.Character.HumanoidRootPart)
+
+	coroutine.wrap(function()
+		taunt({
+			["Text"] = "After seeing something like that!",
+			["SoundId"] = "",
+			["StallTime"] = 3,
+		})
+	end)()
+
+	local length = 20 + 5
+
+	local et = templates.EyeTrails:Clone()
+	et.Parent = script
+
+	local efsp = templates.EyeFlameSP:Clone()
+	efsp.Parent = script
+
+	local w1 = Instance.new("Weld", owner.Character)
+	w1.Part0 = et
+	w1.Part1 = owner.Character.Head
+
+	local w2 = Instance.new("Weld", owner.Character)
+	w2.Part0 = efsp
+	w2.Part1 = owner.Character.Head
+
+	task.delay(length, et.Destroy, et)
+	task.delay(length, efsp.Destroy, efsp)
+
+	for _, v in pairs(et:GetDescendants()) do
+		coroutine.wrap(function()
+			if v:IsA("ParticleEmitter") or v:IsA("Beam") and v.Enabled == false then
+				v.Enabled = true
+				v.Color = ColorSequence.new(Color3.new(1, 1, 0))
+				task.wait(length * .8)
+
+				v.Enabled = false
+			elseif v:IsA("Trail") then
+				v.Color = ColorSequence.new(Color3.new(1, 1, 0))
+			end
+		end)()
+	end
+
+	for _, v in pairs(efsp:GetDescendants()) do
+		coroutine.wrap(function()
+			if v:IsA("ParticleEmitter") or v:IsA("Beam") and v.Enabled == false then
+				v.Enabled = true
+				v.Color = ColorSequence.new(Color3.new(1, 1, 0))
+				task.wait(length * .8)
+
+				v.Enabled = false
+			elseif v:IsA("Trail") then
+				v.Color = ColorSequence.new(Color3.new(1, 1, 0))
+			end
+		end)()
+	end
+
+	coroutine.wrap(function()
+		owner.Character:SetAttribute("Resolve", true)
+		task.wait(length)
+
+		task.delay(3, theme.Destroy, theme)
+		owner.Character:SetAttribute("Resolve", false)
+		game:GetService("TweenService"):Create(theme, TweenInfo.new(3), {Volume = 0}):Play()
+
+		task.wait(cds.Resolve)
+
+		dbs.Resolve = false
+	end)()
+
+	local gap = owner.Character.Humanoid.MaxHealth - owner.Character.Humanoid.Health
+	local gain = math.clamp(gap, 0, 50)
+	owner.Character.Humanoid.Health += gain
+	task.wait(5)
+
+	vl:Destroy()
+	owner.Character.Humanoid.WalkSpeed = 16
+	owner.Character.Humanoid.JumpPower = 50
+
+	dbs.Stunned = false
+end
+
+local function debrisfx()
+	local dist = owner.Character.HumanoidRootPart.CFrame
+	dist = (owner.Character.HumanoidRootPart.Position - dist.Position).Magnitude
+
+	--[[
+	if dist < 15 and not CancelShake then
+		if player.Settings["CameraShake"].Value == false then print('No Camera Shake') return end
+		local camShake = cameraShaker.new(Enum.RenderPriority.Camera.Value, function(shakeCFrame)
+			playerCamera.CFrame = playerCamera.CFrame * shakeCFrame
+		end)
+
+		camShake:Stop()
+		camShake:Start()
+		camShake:Shake(cameraShaker.Presets.Explosion2)
+	end
+	]]--
+
+	local debris = templates.DebrisImpact:Clone()
+	debris.Parent = script
+	debris:SetPrimaryPartCFrame(owner.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, -5) * CFrame.Angles(0, math.rad(Random.new():NextNumber(-360, 360)), 0))
+
+	local params = RaycastParams.new()
+	params.FilterDescendantsInstances = {owner.Character, script}
+	params.FilterType = Enum.RaycastFilterType.Blacklist
+
+	local ray = workspace:Raycast(debris.Primary.Position, Vector3.new(0, -10, 0), params)
+
+	if ray then
+		local rot = debris.PrimaryPart.CFrame - debris.PrimaryPart.Position
+		local ncf = CFrame.new(ray.Position + Vector3.new(0, 3, 0)) * rot
+
+		debris:SetPrimaryPartCFrame(ncf)
+	else
+		debris:Destroy()
+		return
+	end
+
+	for _, v in ipairs(debris:GetChildren()) do
+		if v.Name ~= "Primary" and v.Name ~= "Crack" then
+			if ray and ray.Instance then
+				v.Material = ray.Material
+
+				if ray.Instance.Parent.Name == "LeftToStart" then
+					v.Color = Color3.new(.0235294, .0235294, .0235294)
+				else
+					v.Color = ray.Instance.Color
+				end
+			end
+
+			local rndb = 3 * Random.new():NextInteger(-1, 0)
+
+			if rndb == 0 then
+				rndb += 3
+			end
+
+			local p = v:Clone()
+			p.Parent = script
+			p.Anchored = false
+			p.CanCollide = false
+			p.Size = Vector3.new(Random.new():NextNumber(1, 2), Random.new():NextNumber(1, 2), Random.new():NextNumber(1, 2))
+			p.CFrame = debris.Primary.CFrame * CFrame.Angles(math.rad(Random.new():NextNumber(-360, 360)), math.rad(Random.new():NextNumber(-360, 360)), math.rad(Random.new():NextNumber(-360, 360)))
+
+			local bp = Instance.new("BodyPosition", p)
+			bp.MaxForce = Vector3.new(100000, 100000, 100000)
+			bp.Position = debris.Primary.CFrame * CFrame.new(Random.new():NextNumber(-2, 2), Random.new():NextNumber(-1, 1), Random.new():NextNumber(-2, 2)) * CFrame.new(Random.new():NextNumber(-25, 25), Random.new():NextNumber(1, 25), Random.new():NextNumber(-25, 25)).Position
+
+			coroutine.wrap(function()
+				task.wait(.25)
+
+				bp:Destroy()
+				p.CanCollide = true
+				task.wait(5)
+
+				p:Destroy()
+			end)()
+		end
+	end
+
+	task.wait(5)
+
+	for _, v in pairs(debris:GetChildren()) do
+		v.Anchored = false
+		v.CanCollide = false
+
+		task.wait(.1)
+		coroutine.wrap(function()
+			task.wait(2)
+			v:Destroy()
+		end)()
+	end
+end
+
+local function gslamfx1()
+	local ground = templates.Ground:Clone()
+	ground.Parent = script
+	ground.CFrame = stand["Stand Right Arm"].CFrame
+
+	ground.Particle1:Emit(ground.Particle1.Rate / 35)
+	ground.Particle2:Emit(ground.Particle2.Rate / 35)
+	ground.Particle3:Emit(ground.Particle3.Rate / 35)
+	ground.Particle4:Emit(ground.Particle4.Rate / 35)
+	ground.Attachment.vroom:Emit(ground.Attachment.vroom.Rate / 4)
+
+	task.delay(8, ground.Destroy, ground)
+end
+
+local function gslamfx2()
+	local params = RaycastParams.new()
+	params.FilterDescendantsInstances = {owner.Character, script}
+	params.FilterType = Enum.RaycastFilterType.Blacklist
+
+	local floor = workspace:Raycast(stand["Stand Right Arm"].Position, Vector3.new(0, -10, 0), params)
+
+	if floor then
+		local dbr = templates.DebrisRubble2:Clone()
+		dbr.Parent = script
+		task.delay(4, dbr.Destroy, dbr)
+
+		dbr.CFrame = CFrame.new(floor.Position)
+		dbr.smoke.Color = ColorSequence.new(floor.Instance.Color)
+
+		dbr.rocks:Emit(20)
+		dbr.smoke:Emit(20)
+	end
+end
+
+local function groundslam()
+	if dbs.Summoned == false or dbs.Stunned == true or dbs.GroundSlam == true then
+		return
+	end
+
+	play("GroundSlam")
+
+	dbs.Stunned = true
+	dbs.GroundSlam = true
+
+	owner.Character.Humanoid.WalkSpeed = 0
+	owner.Character.Humanoid.JumpPower = 0
+	owner.Character.Humanoid.AutoRotate = false
+
+	AnimationHandler:ToggleWelds(nil, false, true)
+
+	AnimationHandler:Animate({
+		["Speed"] = 2,
+		["Priority"] = 3,
+		["Wrapped"] = true,
+		["Animation"] = anims.GroundSlam
+	})
+
+	AnimationHandler:Animate({
+		["Speed"] = 2,
+		["Rig"] = stand,
+		["Priority"] = 3,
+		["Wrapped"] = true,
+		["Animation"] = anims.GroundSlam
+	})
+
+	coroutine.wrap(function()
+		task.wait((AnimationHandler:GetAnimationLength(anims.GroundSlam) / 2) * .8)
+
+		AnimationHandler:Stop({
+			["DisableWelds"] = true,
+			["Animation"] = anims.GroundSlam
+		})
+
+		AnimationHandler:Stop({
+			["Rig"] = stand,
+			["Animation"] = anims.GroundSlam
+		})
+	end)()
+
+	task.wait(.25)
+
+	play("GroundSlamSFX")
+
+	coroutine.wrap(debrisfx)()
+	coroutine.wrap(gslamfx1)()
+	coroutine.wrap(gslamfx2)()
+
+	coroutine.wrap(function()
+		local inhb = hb(stand.StandHumanoidRootPart, CFrame.new(0, 0, -7), Vector3.new(10, 10, 10), {}, "Magnitude")
+
+		attack(inhb, {
+			["Stun"] = 1,
+			["Damage"] = 45,
+			["HitEffect"] = "Heavy",
+			["Knockback"] = {35, .3, Vector3.new(0, 35, 0)}
+		})
+	end)()
+
+	task.wait(.5)
+
+	owner.Character.Humanoid.WalkSpeed = 16
+	owner.Character.Humanoid.JumpPower = 50
+	owner.Character.Humanoid.AutoRotate = true
+
+	dbs.Stunned = false
+
+	task.delay(cds.GroundSlam, function()
+		dbs.GroundSlam = false
+	end)
+end
+
+re.OnServerEvent:Connect(function(plr, args)
+	if owner.Character:GetAttribute("Stunned") == true then
+		return
+	end
+
+	if args.Action == "EUpdate" then
+		dbs.EHeld = args.EHeld
+	elseif args.Action == "HP" then
+		local hp = owner.Character.Health
+		hp.Disabled = not hp.Disabled
+
+		print("Healing: " .. hp.Enabled)
+	elseif args.Action == "Summon" then
+		summon()
+	elseif args.Action == "LMB" then
+		combo()
+	elseif args.Action == "EMoves" then
+		emoves()
+	elseif args.Action == "HeavyPunch" then
+		heavypunch()
+	elseif args.Action == "TMoves" then
+		tmoves(args.Mouse)
+	elseif args.Action == "LiverShot" then
+		livershot()
+	elseif args.Action == "GroundSlam" then
+		groundslam()
+	elseif args.Action == "Resolve" then
+		resolve()
+	elseif args.Action == "Beatdown" then
+		beatdown()
+	elseif args.Action == "Teleport" then
+		teleport(args.Mouse)
+	elseif args.Action == "Taunt" then
+		if dbs.Taunt == true or dbs.BeatdownActive == true then
+			return
+		end
+
+		dbs.Taunt = true
+
+		taunt(table.clone(taunts)[Random.new():NextInteger(1, table.getn(taunts))])
+
+		task.delay(cds.Taunt, function()
+			dbs.Taunt = false
+		end)
+	end
+end)
+
+-- [[ LOCALSCRIPT ]] --
+
+NLS([[
+	local debug = false
+	local re = script.Parent
+	local m = owner:GetMouse()
+	local rf = re.SPTWFunction
+	local stand = re.Stand.Value
+	local sc = re.StandArms.Value
+	local cam = workspace.CurrentCamera
+	local uis = game:GetService("UserInputService")
+
+	script.Parent = workspace
+
+	local moveset = {
+		["L"] = "HP",
+		["M1"] = "LMB",
+		["Q"] = "Summon",
+		["E"] = "EMoves",
+		["R"] = "HeavyPunch",
+		["T"] = "TMoves",
+		["Y"] = "LiverShot",
+		["G"] = "GroundSlam",
+		["H"] = "Resolve",
+		["J"] = "Beatdown",
+		["V"] = "Teleport",
+		["N"] = "Taunt"
+	}
+
+	local function raycast()
+		local mp = uis:GetMouseLocation()
+		local mr = cam:ViewportPointToRay(mp.X, mp.Y)
+
+		local params = RaycastParams.new()
+		params.FilterDescendantsInstances = {tts}
+		params.FilterType = Enum.RaycastFilterType.Blacklist
+
+		local r = workspace:Raycast(mr.Origin, mr.Direction * 1000, params)
+
+		if r then
+			return {
+				["Hit"] = r.Position,
+				["Target"] = r.Instance
+			}
+		else
+			return {
+				["Hit"] = Vector3.new()
+			}
+		end
+	end
+
+	local function findhum(p)
+		if p:FindFirstAncestorOfClass("Model") then
+			if p:FindFirstAncestorOfClass("Model"):FindFirstChildOfClass("Humanoid") then
+				return p:FindFirstAncestorOfClass("Model"):FindFirstChildOfClass("Humanoid")
+			else
+				return nil
+			end
+		else
+			return nil
+		end
+	end
+
+	function rf.OnClientInvoke(pt, cf, size, bl, type)
+		local params = OverlapParams.new()
+		params.FilterDescendantsInstances = {owner.Character, script, bl}
+		params.FilterType = Enum.RaycastFilterType.Blacklist
+
+		if debug == true then
+			local p = Instance.new("SpawnLocation", script)
+			p.Size = size
+			p.Enabled = false
+			p.Anchored = true
+			p.CanCollide = false
+			p.CFrame = pt.CFrame * cf
+			p.Material = "ForceField"
+			p.Color = Color3.new(1, 0, 0)
+
+			if type == "Magnitude" then
+				p.Shape = "Ball"
+			end
+
+			coroutine.wrap(function()
+				task.wait(.5)
+				p:Destroy()
+			end)()
+		end
+
+		local victims = {}
+		local tbl
+
+		if type == "Magnitude" then
+			tbl = workspace:GetPartBoundsInRadius(pt.CFrame.Position, size.X / 2, params)
+		else
+			tbl = workspace:GetPartBoundsInBox(pt.CFrame * cf, size, params)
+		end
+
+		for _, hit in pairs(tbl) do
+			local hum = findhum(hit)
+
+			if hum and not hit:FindFirstAncestorOfClass("Model"):FindFirstChild("Intangible") then -- // and hum.Health > 0 then
+				if not table.find(victims, hit:FindFirstAncestorOfClass("Model")) then
+					table.insert(victims, hit:FindFirstAncestorOfClass("Model"))
+				end
+			end
+		end
+
+		return victims
+	end
+
+	m.Button1Down:Connect(function()
+		re:FireServer({
+			["Action"] = moveset.M1
+		})
+	end)
+
+	uis.InputBegan:Connect(function(k, gpc)
+		if gpc then
+			return
+		end
+
+		if moveset[k.KeyCode.Name] then
+			re:FireServer({
+				["Mouse"] = raycast(),
+				["Action"] = moveset[k.KeyCode.Name]
+			})
+		end
+	end)
+
+	re.OnClientEvent:Connect(function(what)
+		if what == "BDCamera" then
+			task.wait(.8)
+
+			local ti = 0
+			local ai = -1
+			local hrp = owner.Character.HumanoidRootPart
+
+			local ocf = hrp.CFrame
+
+			cam.CameraType = "Scriptable"
+
+			local cnt = game:GetService("RunService").RenderStepped:Connect(function(dt)
+				ti = ti + dt
+			end)
+
+			local function updcam(cf, fov, info)
+				cam.CFrame = cf
+				cam.FieldOfView = fov or cam.FieldOfView
+
+				if info then
+					game:GetService("TweenService"):Create(cam, info[1], info[2])
+				end
+			end
+
+			local angles = {
+				[0] = function()
+					updcam(CFrame.new((hrp.CFrame * CFrame.new(-1.5 - ti / 10, -.5, -5)).Position, (hrp.CFrame * CFrame.new(0, 1, 0).Position)))
+				end,
+				[1] = function()
+					updcam(CFrame.new((hrp.CFrame * CFrame.new(1 + ti / 10, -.5, -5)).Position, (hrp.CFrame * CFrame.new(0, 1, 0).Position)))
+				end,
+				[2] = function()
+					updcam(CFrame.new((hrp.CFrame * CFrame.new(-.2, .5, -3.5)).Position, (hrp.CFrame * CFrame.new(0, 1, 0).Position)))
+				end,
+				[3] = function()
+					updcam(CFrame.new((hrp.CFrame * CFrame.new(2, 1.7, 3.5)).Position, (hrp.CFrame * CFrame.new(0, 1, -3).Position)))
+				end,
+				[4] = function()
+					updcam(CFrame.new((hrp.CFrame * CFrame.new(2, 1.7, 3.5)).Position, (hrp.CFrame * CFrame.new(0, 1, -3).Position)))
+				end,
+				[5] = function()
+					updcam(CFrame.new((hrp.CFrame * CFrame.new(-3, 2, 1)).Position, (hrp.CFrame * CFrame.new(0, 2, -3).Position)))
+				end,
+				[6] = function()
+					updcam(CFrame.new((hrp.CFrame * CFrame.new(0, 12, -6)).Position, (hrp.CFrame * CFrame.new(0, 2, -6).Position)))
+				end,
+				[7] = function()
+					updcam(CFrame.new((hrp.CFrame * CFrame.new(0, 6, -12 - ti * 2)).Position, (hrp.CFrame * CFrame.new(0,2, -6).Position)))
+				end,
+				[8] = function()
+					updcam(CFrame.new((hrp.CFrame * CFrame.new(3 + ti / 10,2,1)).Position, (hrp.CFrame * CFrame.new(0,2, -6).Position)))
+				end,
+				[9] = function()
+					updcam(CFrame.new((hrp.CFrame * CFrame.new(-3 - ti / 10,2,1)).Position, (hrp.CFrame * CFrame.new(0,2, -3).Position)))
+				end
+			}
+
+			local function rs()
+				ai = ai + 1
+				angles[ai]()
+				ti = 0
+			end
+
+			rs()
+			task.wait(3)
+
+			rs()
+			task.wait(4.8)
+
+			rs()
+			task.wait(2)
+
+			rs()
+			task.wait(1)
+
+			rs()
+			task.wait(1.5)
+
+			rs()
+			task.wait(1.5)
+
+			rs()
+			task.wait(.75)
+
+			rs()
+			task.wait(1.75)
+
+			rs()
+			task.wait(1.3)
+
+			cnt:Disconnect()
+			cam.CameraType = "Custom"
+		end
+	end)
+
+	game:GetService("RunService").RenderStepped:Connect(function()
+		re:FireServer({
+			["Action"] = "EUpdate",
+			["EHeld"] = uis:IsKeyDown(Enum.KeyCode.E)
+		})
+	end)
+]], re)
+
+print([[aut's sptw script by mech
+yeah ik the model is the archangel skin from aut just cope with it ok
+
+-- // controls \\ --
+
+n - quote
+l - toggle healing
+
+q - toggle stand
+lmb - punch combo]])
+
+print([[
+(stand on) e - barrage (must be held down)
+(stand off) e - quick jab
+
+r - chin crusher
+(stand on) t on a target - arm crush (450 stud radius)
+(stand off) t - bearing shot
+y - liver shot
+g - ground slam
+h - resolve (lasts 20 seconds)
+j - beatdown
+v - teleport (100 stud radius)]])
