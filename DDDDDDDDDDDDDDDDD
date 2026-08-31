@@ -1,0 +1,4065 @@
+local AnimationTrack
+local http = game:GetService("HttpService")
+local tween = game:GetService("TweenService")
+
+do
+
+	AnimationTrack = {}
+	AnimationTrack.Rigs = {}
+	AnimationTrack.Speed = 1
+	AnimationTrack.Stall = 0
+	AnimationTrack.Length = 0
+	AnimationTrack.Weight = 1
+	AnimationTrack.Looped = false
+	AnimationTrack.RealWeight = 1
+	AnimationTrack.TimePosition = 0
+	AnimationTrack.IsPlaying = false
+	AnimationTrack.__index = AnimationTrack
+
+	local function enumExists(type, value)
+		return pcall(function()
+			return Enum[type][value] ~= nil
+		end)
+	end
+
+	function AnimationTrack.Destroy(self)
+		if self.Connections then
+			for _, v in pairs(self.Connections) do
+				v:Disconnect()
+			end
+
+			table.clear(self.Connections)
+		end
+
+		if self.Binds then
+			for _, v in pairs(self.Binds) do
+				v:Destroy()
+			end
+
+			table.clear(self.Binds)
+		end
+
+		table.clear(self.Cache)
+		table.clear(self.Used)
+		self.StopBind:Destroy()
+		self.StopBind = nil
+
+		local stuff = AnimationTrack.Rigs[self.Rig]
+
+		if stuff then
+			for i, v in pairs(stuff.Animations) do
+				if v == self then
+					stuff.Animations[i] = nil
+
+					if #(stuff.Animations) == 0 then
+						stuff.Animate:Disconnect()
+						table.clear(stuff.Poses)
+						table.clear(stuff.Welds)
+						table.clear(stuff)
+
+						AnimationTrack.Rigs[self.Rig] = nil
+					end
+
+					break
+				end
+			end
+		end
+
+		table.clear(self)
+		self = nil
+	end
+
+	function AnimationTrack.new()
+		local be = Instance.new("BindableEvent")
+		
+		local track = setmetatable({}, AnimationTrack)
+		track.Used = {}
+		track.Cache = {}
+		track.Binds = {}
+		track.StopBind = be
+		track.Connections = {}
+		track.Stopped = be.Event
+		track.Identifier = http:GenerateGUID()
+
+		return track
+	end
+
+	function AnimationTrack.GetMarkerReachedSignal(self, marker)
+		if not self.Binds[marker] then
+			local be = Instance.new("BindableEvent")
+			self.Binds[marker] = be
+		end
+
+		return self.Binds[marker].Event
+	end
+
+	function AnimationTrack.AdjustWeight(self, weight)
+		self.RealWeight = weight
+		self.Weight = self.RealWeight
+	end
+
+	function AnimationTrack.setRig(self, rig)
+		assert(self.Animation, "Must set Animation before setting Rig!")
+
+		self.Rig = rig
+
+		if not AnimationTrack.Rigs[rig] then
+			AnimationTrack.Rigs[rig] = {
+				Poses = {},
+				Welds = {},
+				Animations = {self}
+			}
+
+			local cnt
+
+			cnt = game:GetService("RunService").PostSimulation:Connect(function()
+				if not AnimationTrack.Rigs[rig] then
+					cnt:Disconnect()
+				end
+				
+				local allDone = true
+
+				for _, v in pairs(AnimationTrack.Rigs[rig].Animations) do
+					if v.IsPlaying then
+						allDone = false
+						break
+					end
+				end
+
+				for i, v in pairs(AnimationTrack.Rigs[rig].Welds) do
+					if v.Parent == nil then
+						AnimationTrack.Rigs[rig].Welds[i] = nil
+						continue
+					end
+
+					if not allDone then
+						v.Enabled = v:GetAttribute("Enabled") or true
+						v.C0 = v.Parent.C0 * AnimationTrack.Rigs[rig].Poses[i]
+					else
+						v.C0 = v.C0:Lerp(v.Parent.C0 * v.Parent.Transform, .3)
+						
+						if (v.C0.Position - (v.Parent.C0 * v.Parent.Transform).Position).Magnitude <= .1 then
+							if not v.Enabled then
+								v.Enabled = false
+							end
+
+							if AnimationTrack.Rigs[self.Rig] then
+								AnimationTrack.Rigs[self.Rig].Poses[i] = CFrame.new()
+							end
+						end
+					end
+				end
+			end)
+
+			AnimationTrack.Rigs[rig].Animate = cnt
+		else
+			table.insert(AnimationTrack.Rigs[rig].Animations, self)
+		end
+
+		for _, v in pairs(rig:GetDescendants()) do
+			if v:IsA("Motor6D") and self.Used[v.Part1.Name] then
+				local weld = v:FindFirstChild("AWeld")
+
+				if not weld then
+					weld = Instance.new("Weld", v)
+					weld.C0 = v.C0
+					weld.C1 = v.C1
+					weld.Name = "AWeld"
+					weld.Part0 = v.Part0
+					weld.Part1 = v.Part1
+				end
+
+				AnimationTrack.Rigs[rig].Welds[v.Part1.Name] = weld
+				AnimationTrack.Rigs[rig].Poses[v.Part1.Name] = CFrame.new()
+			end
+		end
+
+		rig.Parent.ChildRemoved:Connect(function(v)
+			if v == rig then
+				AnimationTrack.Rigs[rig] = nil
+				self:Destroy()
+			end
+		end)
+	end
+
+	function AnimationTrack.getMotor(self, name)
+		if self.Cache[name] then
+			return self.Cache[name]
+		end
+
+		for _, v in pairs(owner.Character:GetDescendants()) do
+			if v:IsA("Motor6D") and v.Part1.Name == name then
+				self.Cache[name] = v
+				return v
+			end
+		end
+	end
+
+	function AnimationTrack.setAnimation(self, anim)
+		local length = 0
+
+		if typeof(anim) == "string" then
+			anim = loadstring(http:GetAsync(anim, true))()
+		end
+
+		self.Animation = anim
+
+		local found = {}
+
+		for _, v in pairs(anim) do
+			if v.tm > length then
+				length = v.tm
+			end
+
+			for j, w in pairs(v) do
+				if typeof(w) ~= "table" or w.cf == CFrame.new() or found[j] then
+					continue
+				end
+
+				found[j] = true
+				self.Used[j] = true
+			end
+		end
+		
+		self.Length = length
+	end
+
+	function AnimationTrack.IsPrioritized(self, j)
+		local highest = 0
+		local prioritized
+
+		for _, v in pairs(AnimationTrack.Rigs[self.Rig].Animations) do
+			if v.Weight > highest and v.IsPlaying then
+				prioritized = v
+				highest = v.Weight
+			end
+		end
+
+		if prioritized == self then
+			return true
+		elseif prioritized ~= self and prioritized then
+			if not prioritized.Used[j] then
+				local second
+				local highest = 0
+
+				for i, v in pairs(AnimationTrack.Rigs[self.Rig].Animations) do
+					if v.Weight > highest and v.IsPlaying and v ~= prioritized then
+						second = v
+						highest = v.Weight
+					end
+				end
+
+				return second == self
+			end
+		end
+	end
+
+	function AnimationTrack.Play(self, speed)
+		speed = speed or 1
+		
+		if self.IsPlaying then
+			for _, v in pairs(self.Connections) do
+				v:Disconnect()
+			end
+		end
+
+		self.Speed = speed
+		self.IsPlaying = true
+		self.Weight = self.RealWeight
+
+		coroutine.wrap(function()
+			repeat
+				self.TimePosition = 0
+
+				for _, v in pairs(self.Animation) do
+					local cnt
+					local total = 0
+					
+					cnt = game:GetService("RunService").PostSimulation:Connect(function(dt)
+						total += dt * self.Speed
+
+						if not self or not self.StopBind then
+							cnt:Disconnect()
+						end
+
+						if total >= v.tm then
+							cnt:Disconnect()
+
+							for j, w in pairs(v) do
+								if typeof(w) ~= "table" or w.cf == CFrame.new() or not AnimationTrack.Rigs[self.Rig].Poses[j] then
+									if typeof(w) == "string" then
+										if self.Binds[j] then
+											self.Binds[j]:Fire(w)
+										end
+									end
+
+									continue
+								end
+
+								if self:IsPrioritized(j) and w.es == "Constant" then
+									local start = os.clock()
+
+									coroutine.wrap(function()
+										repeat
+											AnimationTrack.Rigs[self.Rig].Poses[j] = w.cf
+											task.wait()
+										until os.clock() - start >= (w.tm / self.Speed) * 2
+									end)()
+									
+									continue
+								end
+
+								if not enumExists("EasingStyle", w.es) then
+									w.es = "Linear"
+								end
+
+								local num = Instance.new("CFrameValue")
+								num.Value = AnimationTrack.Rigs[self.Rig].Poses[j]
+
+								coroutine.wrap(function()
+									while num.Name ~= "dead" do
+										task.wait()
+
+										if self:IsPrioritized(j) then
+											AnimationTrack.Rigs[self.Rig].Poses[j] = AnimationTrack.Rigs[self.Rig].Poses[j]:Lerp(num.Value, math.min(.3 * self.Speed, 1))
+										end
+									end
+								end)()
+
+								local tw = tween:Create(num, TweenInfo.new(w.tm / self.Speed, Enum.EasingStyle[w.es], Enum.EasingDirection[w.ed]), {Value = w.cf})
+								tw:Play()
+
+								coroutine.wrap(function()
+									tw.Completed:Wait()
+									num.Name = "dead"
+									num:Destroy()
+								end)()
+							end
+						end
+					end)
+					
+					table.insert(self.Connections, cnt)
+				end
+
+				repeat
+					self.TimePosition += task.wait() * self.Speed
+				until self.TimePosition >= (self.Length + (self.Looped and 0 or self.Stall)) or not self.IsPlaying
+
+				if self.TimePosition >= self.Length and not self.Looped then
+					self:Stop()
+				end
+			until not self.Looped or not self.IsPlaying
+		end)()
+	end
+
+	function AnimationTrack.Stop(self)
+		if not self.IsPlaying then
+			return	
+		end
+
+		self.StopBind:Fire()
+
+		self.Weight = 0
+		self.IsPlaying = false
+
+		self.TimePosition = 0
+
+		for _, cnt in pairs(self.Connections) do
+			cnt:Disconnect()
+		end
+	end
+
+	function AnimationTrack.AdjustSpeed(self, speed)
+		self.Speed = speed or 1
+	end
+end
+
+local assets = game:GetService("ReplicatedStorage"):FindFirstChild("D4CLTAssets")
+
+if not assets then
+	assets = require(16886087052)[1]:Clone()
+	assets.Name = "D4CLTAssets"
+	assets.Parent = game:GetService("ReplicatedStorage")
+end
+
+local ps = game:GetService("PhysicsService")
+
+if not ps:IsCollisionGroupRegistered("Players") then
+	ps:RegisterCollisionGroup("Players")
+end
+
+if not ps:IsCollisionGroupRegistered("Colliders") then
+	ps:RegisterCollisionGroup("Colliders")
+end
+
+ps:CollisionGroupSetCollidable("Players", "Colliders", false)
+
+local no_cd = false
+local char = owner.Character
+local hum = owner.Character.Humanoid
+local base = "https://github.com/MechaXYZ/VSBScripts/raw/main/CD4CAnimations"
+
+hum.WalkSpeed = 25
+char:SetAttribute("OWS", hum.WalkSpeed)
+char:SetAttribute("OJH", hum.JumpHeight)
+
+local re = Instance.new("RemoteEvent", char)
+re.Name = "CD4CEvent"
+
+local rf = Instance.new("RemoteFunction", re)
+rf.Name = "CD4CFunction"
+
+local stand = assets.Stand:Clone()
+stand.Parent = script
+
+for _, v in pairs(stand:GetDescendants()) do
+	if v:IsA("BasePart") then
+		for _, v2 in pairs(assets.Aura:GetChildren()) do
+			local ef = v2:Clone()
+			ef.Parent = v
+			ef.Enabled = false
+		end
+	end
+end
+
+for _, v in pairs(char:GetDescendants()) do
+	if v:IsA("BasePart") then
+		for _, v2 in pairs(assets.Aura:GetChildren()) do
+			local ef = v2:Clone()
+			ef.Parent = v
+			ef.Enabled = false
+		end
+	end
+end
+
+local knife = assets.Other.Knife:Clone()
+knife.Parent = owner.Character
+
+local w = Instance.new("Weld", knife)
+w.Part0 = knife
+w.Part1 = char["Right Arm"]
+w.C1 = CFrame.Angles(-(math.pi / 2), 0, 0)
+w.C0 = CFrame.new(1, -.2, 0) * CFrame.Angles(0, math.pi / 2, 0)
+
+local sw = Instance.new("Weld", stand)
+sw.Part0 = hum.RootPart
+sw.Part1 = stand.StandHumanoidRootPart
+
+local gui = assets.TargetGUI:Clone()
+gui.Enabled = false
+gui.Parent = owner.PlayerGui
+
+local main = assets.Main:Clone()
+main.Parent = owner.PlayerGui
+
+local ltgui = assets.LTGUI:Clone()
+ltgui.Parent = owner.PlayerGui
+
+local cooldowns = assets.Cooldowns:Clone()
+cooldowns.Parent = owner.PlayerGui
+
+local ui = main.Main.UI
+local health = ui.health.healthbar
+
+ui.name.Text = owner.DisplayName
+
+local vp = Instance.new("ViewportFrame", ui.border.image)
+vp.ZIndex = 4
+vp.BackgroundTransparency = 1
+vp.Size = UDim2.fromScale(1, 1)
+
+local wm = Instance.new("WorldModel", vp)
+local fake = game:GetService("Players"):CreateHumanoidModelFromUserId(owner.UserId)
+fake.Parent = wm
+
+for _, v in pairs(fake:GetDescendants()) do
+	if v:IsA("BasePart") then
+		if v:FindFirstAncestorOfClass("Accessory") then
+			local at = v:FindFirstChildOfClass("Attachment")
+			v.CFrame = at.WorldCFrame * at.CFrame:Inverse()
+		end
+
+		v.Anchored = true
+	end
+end
+
+local cam = Instance.new("Camera")
+cam.CFrame = fake.Head.CFrame * CFrame.new(0, 0, -2) * CFrame.Angles(0, math.pi, 0)
+vp.CurrentCamera = cam
+
+Instance.new("UICorner", vp).CornerRadius = UDim.new(1, 0)
+
+assets.Taunt.AlwaysOnTop = true
+
+local cds = {
+	["Pose"] = 1,
+	["Summon"] = 1,
+	["RMoves"] = 5,
+	["GMoves"] = 5,
+	["Taunt"] = 1.5,
+	["Incision"] = 5,
+	["HeadBomb"] = 5,
+	["Leverage"] = 5,
+	["LMBCount"] = 1,
+	["GutGouge"] = 5,
+	["LMBCombo"] = .3,
+	["LMBFinish"] = 3,
+	["LoveTrain"] = 5,
+	["LTProgress"] = 0,
+	["ChopStrike"] = 5,
+	["BodyCarving"] = 5,
+	["HandFortune"] = 5,
+	["StateFuneral"] = 5
+}
+
+local dbs = {
+	["Pose"] = false,
+	["Taunt"] = false,
+	["Summon"] = false,
+	["RMoves"] = false,
+	["GMoves"] = false,
+	["Stunned"] = false,
+	["Incision"] = false,
+	["GutGouge"] = false,
+	["Summoned"] = false,
+	["LMBCombo"] = false,
+	["HeadBomb"] = false,
+	["Leverage"] = false,
+	["LoveTrain"] = false,
+	["ChopStrike"] = false,
+	["BodyCarving"] = false,
+	["HandFortune"] = false,
+	["StateFuneral"] = false,
+	["LoveTrainActive"] = false
+}
+
+local cd_names = {
+	["HeadBomb"] = "Head Bomb",
+	["GutGouge"] = "Gut Gouge",
+	["LMBCombo"] = "Rush Attack",
+	["LoveTrain"] = "Love Train",
+	["LMBFinish"] = "Rush Attack",
+	["ChopStrike"] = "Chop Strike",
+	["Incision"] = "Throat Incision",
+	["BodyCarving"] = "Body Carving",
+	["StateFuneral"] = "State Funeral",
+	["HandFortune"] = "Hand of Fortune",
+	["Chokeslam"] = "Severing Chokeslam",
+	["BloodSpill"] = "Spilling of Blood",
+	["Leverage"] = "Presidential Leverage",
+	["FanfireDisposal"] = "Fanfire Disposal",
+	["PrecisionDisposal"] = "Precision Disposal"
+}
+
+local function get(url)
+	local cache = _G.http_cache
+
+	if not cache then
+		cache = {}
+		_G.http_cache = cache
+	end
+
+	if not cache[url] then
+		cache[url] = http:GetAsync(url)
+	end
+	
+	return cache[url]
+end
+
+local function load(name)
+	return loadstring(get(`{base}/{name}.lua`))()
+end
+
+local guids = {}
+local csdvic = load("Chokeslammed")
+local ggvic = load("GutGougeVictim")
+local tivic = load("IncisionVictim")
+local csvic = load("ChokeslamVictim")
+local bsvic = load("BloodSpillVictim")
+local sfvic = load("StateFuneralVictim")
+
+local anims = {
+	User = {},
+	Stand = {},
+	Run = {load("Run"), true, 1},
+	Idle = {load("Idle"), true, 2},
+	Fall = {load("Fall"), true, 0},
+	Jump = {load("Jump"), false, 3},
+	LMB4 = {load("LMB4"), false, 4},
+	LTRun = {load("LTRun"), true, .9},
+	Land = {load("Land"), false, 3.2},
+	SLMB4 = {load("SLMB4"), false, 4,},
+	Summon = {load("Summon"), false, 4},
+	LMB1 = {load("LMB1"), false, 4, .2},
+	LMB2 = {load("LMB2"), false, 4, .2},
+	LMB3 = {load("LMB3"), false, 4, .2},
+	LTIdle = {load("LTIdle"), true, 1.9},
+	SIdle = {load("StandIdle"), true, 2},
+	SLMB1 = {load("SLMB1"), false, 4, .2},
+	SLMB2 = {load("SLMB2"), false, 4, .2},
+	SLMB3 = {load("SLMB3"), false, 4, .2},
+	PoseIdle = {load("PoseIdle"), true, 4},
+	HeadBomb = {load("HeadBomb"), false, 4},
+	LoveTrain = {load("LTStartup"), false, 4},
+	ChopStrike = {load("ChopStrike"), false, 4},
+	BodyCarving = {load("BodyCarving"), false, 4},
+	IncisionUser = {load("IncisionUser"), false, 4},
+	GutGougeUser = {load("GutGougeUser"), false, 4},
+	GutGougeStart = {load("GutGougeStart"), false, 4},
+	IncisionStart = {load("IncisionStart"), false, 4},
+	ChokeslamUser = {load("ChokeslamUser"), false, 4},
+	ChokeslamStart = {load("ChokeslamStart"), false, 4},
+	BloodSpillUser = {load("BloodSpillUser"), false, 4},
+	PoseTransition = {load("PoseTransition"), false, 4},
+	FanfireDisposal = {load("FanfireDisposal"), false, 4},
+	BloodSpillStart = {load("BloodSpillStart"), false, 4},
+	HandFortuneUser = {load("HandOfFortuneUser"), false, 4},
+	StateFuneralUser = {load("StateFuneralUser"), false, 4},
+	PrecisionDisposal = {load("PrecisionDisposal"), false, 4},
+	StateFuneralStart = {load("StateFuneralStart"), false, 4},
+	HandFortuneStand = {load("HandOfFortuneStand"), false, 4, 10},
+	PresidentialLeverage = {load("PresidentialLeverage"), false, 4}
+}
+
+for i, v in pairs(anims) do
+	if i == "User" or i == "Stand" then
+		continue
+	end
+
+	local anim = AnimationTrack.new()
+	anim.Looped = v[2]
+	anim:setAnimation(v[1])
+	anim:AdjustWeight(v[3])
+	anim.Stall = v[4] or .1
+
+	anim:setRig(owner.Character)
+
+	anims.User[i] = anim
+
+	local anim = AnimationTrack.new()
+	anim.Looped = v[2]
+	anim:setAnimation(v[1])
+	anim:AdjustWeight(v[3])
+	anim.Stall = v[4] or .1
+
+	anim:setRig(stand)
+
+	anims.Stand[i] = anim
+
+	anims[i] = nil
+end
+
+anims.User.Run:Play()
+anims.User.Fall:Play()
+anims.User.Idle:Play()
+anims.User.LTRun:Play()
+anims.User.LTIdle:Play()
+
+local statistics = {
+	LMBCombo = {
+		["Stun"] = .6,
+		["Sound"] = "",
+		["Damage"] = 8,
+		["Knockback"] = {5, .05},
+		["HitEffect"] = "KnifeHit"
+	},
+
+	LMBFinish = {
+		["Stun"] = .3,
+		["Sound"] = "",
+		["Damage"] = 21,
+		["HitEffect"] = "Heavy2",
+		["Knockback"] = {50, .25, Vector3.new(0, 15, 0)}
+	},
+
+	SLMBCombo = {
+		["Stun"] = .6,
+		["Damage"] = 8,
+		["Sound"] = "Hit1",
+		["Knockback"] = {5, .05}
+	},
+
+	SLMBFinish = {
+		["Stun"] = .3,
+		["Damage"] = 21,
+		["Sound"] = "Hit1",
+		["HitEffect"] = "Heavy",
+		["Knockback"] = {50, .25, Vector3.new(0, 15, 0)}
+	},
+
+	BodyCarving1 = {
+		["Stun"] = .3,
+		["Sound"] = "",
+		["Damage"] = 6.25,
+		["HitEffect"] = "Blood3",
+		["Knockback"] = {5, .05}
+	},
+
+	BodyCarving2 = {
+		["Stun"] = .3,
+		["Sound"] = "",
+		["Damage"] = 7.5,
+		["HitEffect"] = "Blood3",
+		["Knockback"] = {50, .25, Vector3.new(0, 15, 0)}
+	},
+
+	HandofFortune = {
+		["Stun"] = 2,
+		["Sound"] = "",
+		["Damage"] = 35,
+		["HitEffect"] = "Blood2",
+		["Knockback"] = {5, .05}
+	},
+
+	BloodSpill = {
+		["Stun"] = 2,
+		["Damage"] = 25,
+		["Sound"] = "Hit4",
+		["HitEffect"] = "",
+		["Animation"] = bsvic,
+		["Knockback"] = {5, .05}
+	},
+
+	Chokeslam1 = {
+		["Sound"] = "",
+		["Animation"] = csvic,
+		["HitEffect"] = "ChokeslamBlood",
+		["Stun"] = anims.Stand.ChokeslamUser.Length + 1
+	},
+
+	Chokeslam2 = {
+		["Sound"] = "",
+		["Damage"] = 6.7
+	},
+
+	Chokeslam3 = {
+		["Sound"] = "",
+		["Damage"] = 20,
+		["Animation"] = csdvic,
+		["Knockback"] = {50, .3}
+	},
+
+	StateFuneral1 = {
+		["Damage"] = 10,
+		["Animation"] = sfvic,
+		["HitEffect"] = "Blood",
+		["Stun"] = anims.Stand.StateFuneralUser.Length + .5
+	},
+
+	StateFuneral2 = {
+		["Damage"] = 25,
+		["Sound"] = "Hit2",
+		["HitEffect"] = "Blood"
+	},
+
+	ChopStrike = {
+		["Stun"] = 2,
+		["Damage"] = 25,
+		["Ragdoll"] = 2,
+		["HitEffect"] = "",
+		["Knockback"] = {5, .05}
+	},
+
+	FanfireDisposal = {
+		["Stun"] = .1,
+		["Damage"] = 5,
+		["Sound"] = "Hit3",
+		["HitEffect"] = "Blood"
+	},
+
+	PrecisionDisposal = {
+		["Stun"] = 1,
+		["Damage"] = 45,
+		["Sound"] = "Hit3",
+		["HitEffect"] = "Blood"
+	},
+
+	Incision1 = {
+		["Stun"] = 3,
+		["Sound"] = "",
+		["Damage"] = 40,
+		["Animation"] = tivic,
+		["HitEffect"] = "Blood"
+	},
+
+	Incision2 = {
+		["Stun"] = 1,
+		["Sound"] = "",
+		["HitEffect"] = "",
+		["Knockback"] = {50, .2, Vector3.new(0, 15, 0)}
+	},
+
+	GutGouge1 = {
+		["Stun"] = 3,
+		["Damage"] = 40,
+		["Sound"] = "Hit4",
+		["HitEffect"] = "",
+		["Animation"] = ggvic
+	},
+
+	GutGouge2 = {
+		["Sound"] = "",
+		["HitEffect"] = "",
+		["Knockback"] = {50, .2, Vector3.new(0, 15, 0)}
+	},
+
+	PresidentialLeverage = {
+		["Stun"] = 3,
+		["Sound"] = "",
+		["Damage"] = 25,
+		["Ragdoll"] = 3,
+		["HitEffect"] = ""
+	},
+
+	HeadBomb = {
+		["Stun"] = 3,
+		["Sound"] = "",
+		["Ragdoll"] = 3,
+		["Damage"] = 22.5,
+		["HitEffect"] = ""
+	}
+}
+
+local sounds = {
+	["Hit1"] = "rbxassetid://6706979361",
+	["Hit2"] = "rbxassetid://8051702012",
+	["Hit3"] = "rbxassetid://6773836020",
+	["Hit4"] = "rbxassetid://6718168815",
+	["Swing"] = "rbxassetid://6706981173",
+	["Theme"] = "rbxassetid://12704426010",
+	["Summon"] = "rbxassetid://8601269440",
+	["LTIdle"] = "rbxassetid://7462170848",
+	["Disable"] = "rbxassetid://8975353711",
+	["SRCombo"] = "rbxassetid://8714570871",
+	["Explode"] = "rbxassetid://6430992501",
+	["GunShot"] = "rbxassetid://8756590785",
+	["GunEquip"] = "rbxassetid://3120031857",
+	["Collision"] = "rbxassetid://7172258964",
+	["WindupSFX"] = "rbxassetid://8975352304",
+	["WindupVoice"] = "rbxassetid://8975351636",
+	["ActivateSFX"] = "rbxassetid://8975353022",
+	["Redirection"] = "rbxassetid://8601276334",
+}
+
+local regions = {
+	LMB3 = {42.477, 44.526958},
+	SLMB1 = {.185667, .808396},
+	SLMB2 = {4.734271, 5.521396},
+	SLMB3S = {39.808167, 41.247},
+	LMB1 = {76.823708, 77.550875},
+	LMB2 = {83.112875, 83.708521},
+	LMB4 = {21.211417, 22.139708},
+	EHit = {13.846979, 15.332250},
+	SLMB3 = {56.672083, 57.352833},
+	SRStart = {1.585583, 4.198333},
+	SRStart2 = {6.98925, 8.366208},
+	Unsummon = {23.230458, 24.561},
+	SLMB2S = {51.380833, 52.262708},
+	SLMB1S = {32.598438, 33.147688},
+	HeadBomb = {9.545917, 12.771729},
+	GutGouge = {69.521167, 70.480396},
+	Incision = {60.238271, 61.971083},
+	HeadToss = {74.727333, 75.702021},
+	HeadBounce = {36.187833, 36.682917},
+	BloodSpill = {67.239125, 68.353062},
+	ChopStrike = {81.325917, 82.068542},
+	IncisionSFX = {34.308042, 35.066146},
+	IncisionHit = {78.602937, 80.250646},
+	GutGougeSFX = {16.871667, 19.996917},
+	BodyCarving = {53.392125, 55.480792},
+	StateFuneral = {27.655292, 28.475292},
+	HandofFortune = {63.139167, 64.198979},
+	ChopStrikeSFX = {84.791542, 85.936417},
+	FanfireDisposal = {65.251042, 66.094229},
+	StateFuneralSFX = {37.758187, 38.709688},
+	HandofFortuneSFX = {29.535083, 31.391667},
+	PrecisionDisposal = {25.790979, 26.502667},
+	PresidentialLeverage = {45.625437, 47.690875},
+	PresidentialLeverageHit = {71.609813, 73.644312},
+
+	Quote1 = {86.98075, 91.831063},
+	Quote2 = {92.929542, 99.079458},
+	Quote3 = {100.293979, 103.326375}
+}
+
+for i, v in pairs(sounds) do
+	local snd = Instance.new("Sound")
+	snd.SoundId = v
+	snd.Volume = .75
+	snd.RollOffMaxDistance = 500
+
+	sounds[i] = snd
+
+	if v ~= "" then
+		coroutine.wrap(function()
+			game:GetService("ContentProvider"):PreloadAsync({snd})
+		end)()
+	end
+end
+
+for i, v in pairs(regions) do
+	local snd = Instance.new("Sound")
+	snd.Volume = .75
+	snd.RollOffMaxDistance = 500
+	snd.PlaybackRegionsEnabled = true
+	snd.SoundId = "rbxassetid://16913191899"
+	snd.PlaybackRegion = NumberRange.new(v[1], v[2])
+
+	sounds[i] = snd
+end
+
+sounds.Hit4.Volume = .1
+
+local theme = sounds.Theme:Clone()
+theme.Pitch = .5
+theme.Looped = true
+theme.Parent = hum.RootPart
+
+local lt_idle = sounds.LTIdle:Clone()
+lt_idle.Looped = true
+lt_idle.Parent = hum.RootPart
+
+local ps = Instance.new("PitchShiftSoundEffect", sounds.Redirection)
+ps.Octave = 1
+ps.Priority = 0
+
+local tr = Instance.new("TremoloSoundEffect", sounds.Redirection)
+tr.Duty = 1
+tr.Depth = .5
+tr.Priority = 0
+tr.Frequency = 5
+
+local killtxts = {
+	"Dead. Not big surprise.",
+	"Retired!",
+	"Arigato, loser.",
+	"Top ten saddest attempts at anything ever",
+	"Consider rokaing",
+	"Outplayed!",
+	"Failure!",
+	"Oh come on, quit already!"
+}
+
+local overtxts = {
+	"less gooo",
+	"universal!",
+	"outstanding!",
+	"amazing!",
+	"incredible!",
+	"can you beat goku though?",
+	"skill issue",
+	"we do a little trolling",
+	"absolute legend",
+	"vec would be proud",
+	"mad?",
+	"It's skittles friday!",
+	"Who's Joe?",
+	"Style points!",
+	"You're suppose to dodge that.",
+	"FIGHT BACK!",
+	"FIGHT BACK COME ON!",
+	"Ah-Ah-Ah! It's - Your'oe.",
+	"Doyjaainnnn!",
+	"THAT'S A BIT...SUSPICIOUS",
+	"Ok and?",
+	"ONI COMBO",
+	"GET HIM HE RKER!@#$!#",
+	"YOOOOOOOOO!",
+	"SWAG!",
+	"Exaggerated Swagger of a Stand user!",
+	"Next time i'll hit you with the- E+R+T+V+Y+LMB+LMB+LMB+F+H+U+E+R+F+LMB+LMB+LMB+LMB combo for sure!",
+	"Hmmmm, nice!",
+	"Do better!",
+	"When Update?",
+	"Smells like stand issue",
+	"IS THAT A JOJO REFERENCE?",
+	"Di Molto!",
+	"Come back when you're a little richer",
+	"MUDA!",
+	"ORA!",
+	"HORA!",
+	"You appear to have been dunked on.",
+	"This is the results.",
+	"CHILL!",
+	"Menacingă´",
+	"insert a quote",
+	"WOAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+	"Nice",
+	"LET'S GO",
+	"Get them!",
+	"a little more!",
+	"HUNT THEM DOWN",
+	"THEY WERE TWO STEPS LATE",
+	"either you or them!",
+	"you ticked them off.",
+	"DAMN",
+	"skilful",
+	"H",
+	"m1 m1 m1 m1",
+	"epic!"
+}
+
+local function hp_change()
+	local ph = math.ceil(hum.Health) / hum.MaxHealth
+	health.Parent.number.Text = `{math.ceil(hum.Health)}/{hum.MaxHealth}`
+
+	if ph <= .4 then
+		health.bar.ImageColor3 = Color3.new(.67, 0, .007)
+		health.bar.bar2.ImageColor3 = Color3.new(.58, 0, .007)
+		-- // health.Parent.number.TextColor3 = Color3.new(.58, 0, .007)
+	elseif ph < .6 and ph > .4 then
+		health.bar.ImageColor3 = Color3.new(.98, 1, 0)
+		health.bar.bar2.ImageColor3 = Color3.new(.7, .7, 0)
+		-- // health.Parent.number.TextColor3 = Color3.new(.7, .7, 0)
+	else
+		health.bar.ImageColor3 = Color3.new(0, 1, .11)
+		health.bar.bar2.ImageColor3 = Color3.new(0, .79, .08)
+		-- // health.Parent.number.TextColor3 = Color3.new(1, 1, 1)
+	end
+
+	tween:Create(
+		health.bar,
+		TweenInfo.new(.5, Enum.EasingStyle.Sine, Enum.EasingDirection.In),
+		{Size = UDim2.new(math.max(ph, .1), 0, 1, 0)}
+	):Play()
+end
+
+hp_change()
+
+local function lerp(a, b, t)
+	return a + (b - a) * t
+end
+
+local function findhum(p)
+	if p:FindFirstAncestorOfClass("Model") then
+		return p:FindFirstAncestorOfClass("Model"):FindFirstChildWhichIsA("Humanoid", true)
+	end
+end
+
+local function hb(pt, cf, size, bl, type, e)
+	if pt ~= "server" then
+		return rf:InvokeClient(owner, pt, cf, size, bl, type)
+	else
+		local pt = cf
+		local cf = size
+		local size = bl
+		local bl = type
+		local type = e
+		
+		local params = OverlapParams.new()
+		params.FilterType = Enum.RaycastFilterType.Exclude
+		params.FilterDescendantsInstances = {char, script, bl}
+
+		if false then
+			local p = Instance.new("Part", script)
+			p.Size = size
+			p.Anchored = true
+			p.CanCollide = false
+			p.CFrame = pt.CFrame * cf
+			p.Material = "ForceField"
+			p.Color = Color3.new(1, 0, 0)
+
+			if type == "Magnitude" then
+				p.Shape = "Ball"
+			end
+
+			coroutine.wrap(function()
+				task.wait(.5)
+				p:Destroy()
+			end)()
+		end
+
+		local victims = {}
+		local tbl
+
+		if type == "Magnitude" then
+			tbl = workspace:GetPartBoundsInRadius(pt.CFrame.Position, size.X, params)
+		else
+			tbl = workspace:GetPartBoundsInBox(pt.CFrame * cf, size, params)
+		end
+
+		for _, hit in pairs(tbl) do
+			local hum = findhum(hit)
+
+			if hum and hum.Health > 0 and not hum:GetAttribute("Ragdolled") then
+				if not table.find(victims, hit:FindFirstAncestorOfClass("Model")) then
+					table.insert(victims, hit:FindFirstAncestorOfClass("Model"))
+				end
+			end
+		end
+
+		return victims
+	end
+end
+
+local function change(ws, jh)
+	hum.WalkSpeed = ws or char:GetAttribute("OWS")
+	hum.JumpHeight = jh or char:GetAttribute("OJH")
+end
+
+local function play(what, p, scf)
+	if sounds[what] then
+		local snd = sounds[what]:Clone()
+		snd.Name = what
+		snd.Parent = p or hum.RootPart
+
+		local pt
+
+		if scf ~= nil then
+			pt = Instance.new("Part", script)
+			pt.CFrame = scf
+			pt.CanCollide = false
+			pt.CanQuery = false
+			pt.CanTouch = false
+			pt.Anchored = true
+			pt.Transparency = 1
+			pt.Size = Vector3.one
+
+			snd.Parent = pt
+		end
+
+		snd:Play()
+		
+		coroutine.wrap(function()
+			snd.Ended:Wait()
+			task.wait(.1)
+
+			snd:Destroy()
+
+			if pt then
+				pt:Destroy()
+			end
+		end)()
+
+		return snd
+	end
+end
+
+local function create_cd(name)
+	local rname = name
+	local fname = cd_names[name] or name
+
+	local unit = cooldowns.CDFrame.Template:Clone()
+	unit.Name = fname
+	unit.topBar.Lab.Text = fname
+	unit.Parent = cooldowns.CDFrame
+	unit.topBar.Typ.Text = "D4C: LT"
+
+	local bar = unit.pBar.Progress
+	bar.Size = UDim2.fromScale(1, 1)
+
+	unit.Visible = true
+
+	for _, v in pairs(unit:GetDescendants()) do
+		v.Visible = true
+	end
+	
+	if name == "LMBFinish" then
+		rname = "LMBCombo"
+	elseif name == "BloodSpill" or name == "Chokeslam" then
+		rname = "RMoves"
+		name = "RMoves"
+	elseif string.find(name, "Disposal") then
+		rname = "GMoves"
+		name = "GMoves"
+	end
+
+	if name == "LoveTrain" then
+		ltgui.D4CLT.Passive.Cooldown.Size = UDim2.fromScale(1, 1)
+		tween:Create(ltgui.D4CLT.Passive.Cooldown, TweenInfo.new((not no_cd and cds.LoveTrain or .1), Enum.EasingStyle.Linear), {Size = UDim2.fromScale(0, 1)}):Play()
+	end
+
+	tween:Create(bar, TweenInfo.new((not no_cd and cds[name] or .1), Enum.EasingStyle.Linear), {Size = UDim2.fromScale(0, 1)}):Play()
+
+	local total = 0
+
+	while true do
+		local dt = task.wait()
+		total += dt
+
+		if total >= (not no_cd and cds[name] or .1) then
+			break
+		end
+	end
+
+	dbs[rname] = false
+	unit:Destroy()
+end
+
+local taunts = {
+	{
+		"The only energy that can cross dimensional walls is my D4C.",
+		"Quote1",
+
+		Timings = {
+			["The only energy that can cross dimensional walls"] = {1.25, false}
+		}
+	},
+
+	{
+		"My heart and actions are utterly unclouded! They are all those of justice.",
+		"Quote2",
+
+		Timings = {
+			["My heart and actions"] = {1, false},
+			["My heart and actions are utterly unclouded!"] = {2, false}
+		}
+	},
+
+	{"THE CORPSE FAVORS ME, VALENTINE!", "Quote3"},
+}
+
+local function taunt(data)
+	local ui
+
+	if not char.Head:FindFirstChild("Taunt") then
+		ui = assets.Taunt:Clone()
+		ui.Parent = char.Head
+	else
+		ui = char.Head:FindFirstChild("Taunt")
+	end
+
+	ui.Text.Text = ""
+	task.wait()
+	tween:Create(ui.Text, TweenInfo.new(.5), {TextTransparency = 0}):Play()
+	tween:Create(ui.Text, TweenInfo.new(.5), {TextStrokeTransparency = .75}):Play()
+
+	coroutine.wrap(function()
+		for i = 1, #(data[1]) do
+			task.wait(.03)
+			ui.Text.Text = string.sub(data[1], 1, i)
+
+			if data.Timings then
+				for part, time in pairs(data.Timings) do
+					if string.match(ui.Text.Text, part) and not time[2] then
+						time[2] = true
+						task.wait(time[1])
+					end
+				end
+			end
+		end
+	end)()
+
+	play(data[2]).Ended:Wait()
+	
+	if data.Timings then
+		for _, time in pairs(data.Timings) do
+			time[2] = false
+		end
+	end
+
+	task.wait(1.5)
+	tween:Create(ui.Text, TweenInfo.new(.5), {TextTransparency = 1}):Play()
+	tween:Create(ui.Text, TweenInfo.new(.5), {TextStrokeTransparency = 1}):Play()
+
+	create_cd("Taunt")
+end
+
+local function dmgui(mdl, dmg)
+	if mdl:GetAttribute("DeadNotBigSurprise") then
+		return
+	end
+
+	local ui = mdl:FindFirstChild("DamageGUI")
+
+	if not ui then
+		ui = assets.DamageGUI:Clone()
+		ui.Parent = mdl
+	end
+
+	local tb = ui.BBG.TextBox
+
+	local ogdmg = tonumber(tb.Text) or 0
+	ogdmg += dmg
+
+	local txt
+	
+	if math.floor(ogdmg) == ogdmg then
+		txt = tostring(ogdmg)
+	else
+		txt = string.format("%.1f", tostring(ogdmg))
+	end
+
+	if ogdmg > 100 then
+		tb.Text = overtxts[math.random(1, #(overtxts))]
+		ui.Name = "DisabledDamageGUI"
+	elseif mdl:FindFirstChildWhichIsA("Humanoid", true).Health <= 0 then
+		tb.Text = killtxts[math.random(1, #(killtxts))]
+		ui.Name = "DisabledDamageGUI" 
+
+		mdl:SetAttribute("DeadNotBigSurprise", true)
+	else
+		tb.Text = txt
+	end
+
+	ui.BBG.Size = UDim2.new(10, 0, 2, 0)
+
+	tb.TextTransparency = 0
+	tb.TextStrokeTransparency = 0
+
+	local hrp = mdl:FindFirstChild("HumanoidRootPart")
+
+	ui.CFrame = hrp.CFrame * CFrame.new(Random.new():NextNumber(-1, 1), Random.new():NextNumber(-1, 1), Random.new():NextNumber(-1, 1))
+
+	local inf1 = TweenInfo.new(.5, Enum.EasingStyle.Cubic,Enum.EasingDirection.Out)
+	local inf2 = TweenInfo.new(3, Enum.EasingStyle.Quint, Enum.EasingDirection.In)
+
+	tween:Create(ui.BBG, inf1, {Size = UDim2.new(5, 0, 1, 0)}):Play()
+	tween:Create(tb, inf1, {Rotation = Random.new():NextNumber(-15, 15)}):Play()		
+
+	tween:Create(ui, inf2, {CFrame = ui.CFrame * CFrame.new(0, -4, 0)}):Play()
+	tween:Create(tb, inf2, {TextTransparency = 1, TextStrokeTransparency = 1}):Play()
+	
+	coroutine.wrap(function()
+		repeat
+			task.wait()
+		until tb.TextTransparency >= .99
+
+		ui:Destroy()
+	end)()
+end
+
+local function stun(hum, t)
+	if t == 0 or nil then
+		return
+	end
+
+	coroutine.wrap(function()
+		local mdl = hum:FindFirstAncestorOfClass("Model")
+		local sc = mdl:GetAttribute("StunCounter") or 0
+		mdl:SetAttribute("StunCounter", sc + 1)
+
+		local ows = hum:GetAttribute("OWS") or hum.WalkSpeed
+		hum:SetAttribute("OWS", ows)
+
+		hum.WalkSpeed = .5
+		
+		mdl:SetAttribute("Stunned", true)
+
+		if not mdl:FindFirstChild("StunGUI") then
+			local ui = assets.DamageGUI.BBG:Clone()
+			ui.Name = "StunGUI"
+			ui.Parent = mdl
+			ui.TextBox.Text = "STUNNED"
+			ui.ClipsDescendants = false
+			ui.Size = UDim2.fromScale(3, 1.5)
+			ui.Adornee = mdl.HumanoidRootPart
+			ui.StudsOffset = Vector3.new(0, 3, 0)
+		end
+
+		coroutine.wrap(function()
+			repeat
+				hum:UnequipTools()
+				task.wait()
+			until mdl:GetAttribute("StunCounter") == 0
+		end)()
+
+		task.wait(t)
+
+		if mdl:GetAttribute("StunCounter") ~= sc + 1 then
+			return
+		end
+
+		mdl:SetAttribute("StunCounter", 0)
+
+		if mdl:FindFirstChild("StunGUI") then
+			mdl.StunGUI:Destroy()
+		end
+
+		mdl:SetAttribute("Stunned", false)
+
+		hum.WalkSpeed = ows
+	end)()
+end
+
+local function ghit(p, n, red)
+	local cf = p.CFrame
+
+	local h1 = assets.HitEffects.Hit:Clone()
+	local h2 = assets.HitEffects.Hit3:Clone()
+	local h3 = assets.HitEffects.HitPE:Clone()
+
+	for _ = 1, 10 do
+		coroutine.wrap(function()
+			local lv = cf * CFrame.Angles(math.rad(Random.new():NextNumber(0, 360)), 0, math.rad(Random.new():NextNumber(0, 360)))
+
+			local h = h1:Clone()
+			h.Size = Vector3.new(Random.new():NextNumber(.1, .3), Random.new():NextNumber(1, 3), Random.new():NextNumber(.1, .3)) * 1.5
+			h.CFrame = lv * CFrame.new(0, h.Size.Y / 2, 0)
+			h.Parent = script
+
+			if red then
+				h.Color = Color3.new(1, 0, 0)
+			end
+
+			local tw = tween:Create(h, TweenInfo.new(.5), {CFrame = h.CFrame * CFrame.new(0, Random.new():NextNumber(3, 8), 0), Size = Vector3.new(), Transparency = 1})
+			tw:Play()
+
+			coroutine.wrap(function()
+				tw.Completed:Wait()
+				h:Destroy()
+			end)()
+		end)()
+	end
+	
+	h2.CFrame = cf
+	h2.Parent = script
+
+	if red then
+		h3.Color = ColorSequence.new(Color3.new(1, 0, 0))
+	end
+
+	h3.Parent = p
+	h3:Emit(n or 2)
+
+	for _, v in ipairs(h2.Attachment:GetChildren()) do
+		if red then
+			v.Color = ColorSequence.new(Color3.new(1, 0, 0))
+		end
+
+		v.Brightness = 10
+		v:Emit(25)
+	end
+
+	task.delay(.5, function()
+		h2:Destroy()
+		h3:Destroy()
+	end)
+end
+
+local function hfx(t, victim, ep)
+	if typeof(ep) ~= "CFrame" then
+		ep = ep or victim.HumanoidRootPart
+	else
+		local oep = ep
+
+		ep = Instance.new("Part", script)
+		ep.Anchored = true
+		ep.Transparency = 1
+		ep.CanCollide = false
+		ep.CanQuery = false
+		ep.CanTouch = false
+		ep.CFrame = oep
+
+		task.delay(3, ep.Destroy, ep)
+	end
+
+	if t == "Hit" or t == "Heavy" then
+		local ef = assets.Other.LMBEffects[t]:Clone()
+		ef.Parent = ep
+		ef.WorldCFrame = CFrame.new(ep.Position, hum.RootPart.Position) * CFrame.Angles(math.pi / 2, 0, 0)
+		
+		for _, v in pairs(ef:GetChildren()) do
+			task.delay(v:GetAttribute("EmitDelay") or 0, v.Emit, v, (v:GetAttribute("EmitCount") or 15))
+		end
+
+		task.wait(2)
+		ef:Destroy()
+	elseif assets.Other:FindFirstChild(t) then
+		local ef = assets.Other:FindFirstChild(t):Clone()
+		ef.Parent = ep
+		ef.Anchored = true
+		ef.CanCollide = false
+		ef.CanQuery = false
+		ef.CanTouch = false
+		ef.Transparency = 1
+		ef.CFrame = ep.CFrame
+
+		for _, v in pairs(ef:GetDescendants()) do
+			if v:IsA("ParticleEmitter") then
+				task.delay(v:GetAttribute("EmitDelay") or 0, v.Emit, v, (v:GetAttribute("EmitCount") or 15))
+			end
+		end
+
+		task.wait(2)
+		ef:Destroy()
+	end
+end
+
+local function ragdoll(c, t)
+	local hum = c:FindFirstChildOfClass("Humanoid")
+	local hrp = c:FindFirstChild("HumanoidRootPart") or c:FindFirstChild("Torso")
+	
+	local cs = c:FindFirstChild("ColliderFolder") or Instance.new("Folder", c)
+	cs.Name = "ColliderFolder"
+
+	hum.PlatformStand = true
+	hum:SetAttribute("Ragdolled", true)
+	
+	for _,v in pairs(c:GetDescendants()) do
+		if v:IsA("Motor6D") or v:IsA("Motor") then
+			local bcs = Instance.new("BallSocketConstraint", v.Part0)
+			bcs.Name = "RagdollSocket"
+			v.Part1.CanCollide = false
+			v.Part0.CanCollide = false
+			v.Part1.CollisionGroup = "Players"
+
+			local fake = Instance.new("Part", cs)
+			fake.Transparency = 1
+			fake.Massless = true
+			fake.CanCollide = false
+			fake.Name = v.Part1.Name
+			fake.Size = v.Part1.Size / 2
+			fake.CFrame = v.Part1.CFrame
+			fake.CollisionGroup = "Colliders"
+
+			local w = Instance.new("WeldConstraint",fake)
+			w.Part0 = v.Part1
+			w.Part1 = fake
+
+			local a1 = Instance.new("Attachment", v.Part0)
+			a1.Name = "RagdollAttachment"
+
+			local a2 = Instance.new("Attachment", v.Part1)
+			a2.Name = "RagdollAttachment"
+
+			a2.Position = v.C1.Position
+			a1.WorldPosition = a2.WorldPosition
+
+			bcs.LimitsEnabled = true
+			bcs.TwistLimitsEnabled = true
+
+			bcs.Attachment0 = a1
+			bcs.Attachment1 = a2
+			
+			local w
+
+			if v.Part0 ~= c.PrimaryPart and v.Part1 ~= c.PrimaryPart then
+				fake.CanCollide = true
+				v.Enabled = false
+			else
+				w = Instance.new("Weld", hrp)
+				w.Part0 = c.PrimaryPart
+				w.Part1 = (c.PrimaryPart == v.Part1 and v.Part0 or v.Part1)
+				w.Enabled = true
+			end
+			
+			coroutine.wrap(function()
+				if t ~= nil and tonumber(t) ~= nil then
+					task.wait(t)
+					hum.PlatformStand = false
+					hum:SetAttribute("Ragdolled", nil)
+					
+					fake:Destroy()
+					v.Enabled = true
+					
+					if w then
+						w.Enabled = false
+					end
+				end
+			end)()
+		end
+	end
+end
+
+local function update_bar()
+	local p = ltgui.D4CLT
+
+	p.Label.Text = `{math.round(cds.LTProgress)}%`
+	p.Mode.Mode.Text = (dbs.LoveTrainActive and "Defend" or "Attack")
+	tween:Create(p.Bar.Meter, TweenInfo.new(.3), {Size = UDim2.fromScale(1, (cds.LTProgress / 100))}):Play()
+
+	-- // if math.floor(cds.LTProgress) == cds.LTProgress then
+	-- // 	p.Label.Text = `{cds.LTProgress}%`
+	-- // else
+	-- // 	p.Label.Text = string.format("%.1f", tostring(cds.LTProgress)) .. "%"
+	-- // end
+end
+
+local function attack(tbl, stats, ep)
+	local victims = tbl
+
+	if #(victims) ~= 0 then
+		local snd = stats.Sound or "Hit1"
+		
+		if stats.Sound then
+			if typeof(stats.Sound) == "table" then
+				snd = stats.Sound[math.random(1, #(stats.Sound))]
+			end
+		end
+
+		play(snd, victims[1]:FindFirstChild("HumanoidRootPart"))
+	end
+
+	for i, victim in pairs(victims) do
+		coroutine.wrap(function()
+			local thum, hrp = victim:FindFirstChildWhichIsA("Humanoid"), victim:FindFirstChild("HumanoidRootPart")
+
+			thum.Health -= (stats.Damage or 0)
+
+			if not dbs.LoveTrainActive then
+				cds.LTProgress = math.clamp(cds.LTProgress + ((stats.Damage or 0) / 10), 0, 100)
+			end
+
+			update_bar()
+			stun(thum, stats.Stun)
+			
+			if stats.Damage then
+				dmgui(victim, stats.Damage)
+			end
+
+			if stats.Animation and hum.RigType == Enum.HumanoidRigType.R6 then
+				coroutine.wrap(function()
+					if not guids[victim] then
+						guids[victim] = {}
+					end
+
+					if guids[victim][stats.Animation] then
+						guids[victim][stats.Animation]:Play()
+						return
+					end
+
+					local anim = AnimationTrack.new()
+					anim:setAnimation(stats.Animation)
+					anim:AdjustWeight(10)
+					anim:setRig(victim)
+					anim:Play()
+
+					guids[victim][stats.Animation] = anim
+				end)()
+			end
+			
+			if stats.Ragdoll then
+				coroutine.wrap(ragdoll)(victim, stats.Ragdoll)	
+			end
+
+			if stats.Knockback then
+				local bv = Instance.new("BodyVelocity", hrp)
+				bv.MaxForce = Vector3.one * 10000000
+				bv.Velocity = (hum.RootPart.CFrame.LookVector * stats.Knockback[1]) + (stats.Knockback[3] or Vector3.zero)
+				
+				task.delay(stats.Knockback[2], bv.Destroy, bv)
+			end
+
+			coroutine.wrap(hfx)(stats.HitEffect or "Hit", victim, ep)
+		end)()
+	end
+end
+
+local function knifer(t)
+	if t == 1 then
+		knife.Trail.Enabled = false
+	end
+
+	tween:Create(knife, TweenInfo.new(.2), {Transparency = t}):Play()
+
+	for _, v in pairs(knife:GetChildren()) do
+		if v:IsA("BasePart") then
+			tween:Create(v, TweenInfo.new(.2), {Transparency = t}):Play()
+		end
+	end
+
+	task.delay(.2, function()
+		if t == 0 then
+			knife.Trail.Enabled = true
+		end
+	end)
+end
+
+local organs = {
+	"Heart",
+	"Abdomen",
+	"Intestine"
+}
+
+local function gore(victim, what)
+	local torso = victim:FindFirstChild("Torso")
+	local arm = victim:FindFirstChild("Left Arm")
+	local shirt = victim:FindFirstChildWhichIsA("Shirt")
+	local hrp = victim:FindFirstChild("HumanoidRootPart")
+
+	if what == "SeverArm" and arm and arm.Transparency == 0 then
+		arm.Transparency = 1
+
+		local carm = assets.Other.HalfLeftArm:Clone()
+		carm:PivotTo(arm.CFrame)
+
+		carm.Parent = victim
+		carm.Top.TopArm.Color = arm.Color
+		carm.Bottom.BottomArm.Color = arm.Color
+
+		if shirt then
+			carm.Top.Shirt.TextureID = shirt.ShirtTemplate
+			carm.Bottom.Shirt.TextureID = shirt.ShirtTemplate
+		else
+			carm.Top.Shirt:Destroy()
+			carm.Bottom.Shirt:Destroy()
+		end
+		
+		local w = Instance.new("Weld", carm.Top.TopArm)
+		w.Part0 = arm
+		w.Part1 = carm.Top.TopArm
+		w.C0 = CFrame.new(0, .35, 0)
+
+		for _, v in pairs(carm:GetDescendants()) do
+			if v:IsA("ParticleEmitter") then
+				v.Enabled = true
+			end
+		end
+
+		coroutine.wrap(function()
+			local start = tick()
+
+			repeat
+				task.wait(.75)
+
+				if carm.Parent ~= nil and #(carm:GetDescendants()) > 3 and carm:FindFirstChild("Bottom") then
+					local params = RaycastParams.new()
+					params.FilterType = Enum.RaycastFilterType.Exclude
+					params.FilterDescendantsInstances = {char, script, victim}
+
+					local result = workspace:Raycast(carm.Bottom.BottomArm.Position, Vector3.new(0, -15, 0))
+
+					if result then
+						coroutine.wrap(function()
+							local pool = assets.Blood:Clone()
+							pool.Parent = script
+							pool.Material = Enum.Material.Glass
+							pool.Position = result.Position + Vector3.new(math.random(-1, 1), 0, math.random(-1, 1))
+							
+							tween:Create(pool, TweenInfo.new(.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = pool.Size * math.random(2, 5)}):Play()
+							task.wait(5)
+							
+							tween:Create(pool, TweenInfo.new(.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Transparency = 1}):Play()
+							task.wait(.5)
+							pool:Destroy()
+						end)()
+					end
+				end
+
+			until tick() - start >= 10
+
+			carm:Destroy()
+			arm.Transparency = 0
+		end)()
+	elseif what == "Donut" and torso and torso.Transparency == 0 then
+		torso.Transparency = 1
+
+		local donut = assets.DonutedTorso:Clone()
+		donut.Parent = victim
+		donut.Color = torso.Color
+		donut.BloodHit.Enabled = true
+		
+		local w = Instance.new("Weld", donut)
+		w.Part0 = donut
+		w.Part1 = torso
+
+		if shirt then
+			for _, v in pairs(donut:GetChildren()) do
+				if v:IsA("Texture") then
+					v.Texture = shirt.ShirtTemplate
+				end
+			end
+		end
+
+		coroutine.wrap(function()
+			task.wait(1)
+			donut.BloodHit.Enabled = false
+			
+			task.wait(8)
+			w:Destroy()
+			donut:Destroy()
+			torso.Transparency = 0
+		end)()
+	elseif what == "BloodSplat" then
+		for i = 1, 25 do
+			if i == 1 then
+				for _, v in pairs(organs) do
+					local organ = assets[v]:Clone()
+					organ.Parent = script
+					organ.CanCollide = false
+					organ.CFrame = hrp.CFrame * CFrame.Angles(
+						math.rad(
+							math.random(-45, 45)
+						),
+						
+						math.rad(
+							math.random(-45, 45)
+						),
+
+						math.rad(
+							math.random(-45, 45)
+						)
+					)
+
+					local bp = Instance.new("BodyPosition", organ)
+					bp.D = 800
+					bp.MaxForce = Vector3.one * 1000000
+					bp.Position = (organ.CFrame * CFrame.new(0, 0, math.random(-7, -5))).Position
+
+					task.delay(.2, function()
+						bp:Destroy()
+						organ.CanCollide = true
+						task.wait(5)
+
+						organ:Destroy()
+					end)
+				end
+			end
+
+			for i = 1, 4 do
+				local trail = assets.BloodTrail:Clone()
+				trail.Parent = script
+				trail.CanCollide = false
+				trail.Trail.Lifetime = math.random(1, 5) / 10
+				trail.CFrame = hrp.CFrame * CFrame.Angles(
+					math.rad(
+						math.random(-45, 45)
+					),
+					
+					math.rad(
+						math.random(-45, 45)
+					),
+
+					math.rad(
+						math.random(-45, 45)
+					)
+				)
+
+				local bp = Instance.new("BodyPosition", trail)
+				bp.D = 800
+				bp.MaxForce = Vector3.one * 100000000
+				bp.Position = (trail.CFrame * CFrame.new(0, math.random(-2, 2), math.random(-13, -5))).Position
+
+				task.delay(.2, function()
+					bp:Destroy()
+					task.wait(.2)
+
+					local params = RaycastParams.new()
+					params.FilterType = Enum.RaycastFilterType.Exclude
+					params.FilterDescendantsInstances = {char, script, victim}
+
+					local result = workspace:Raycast(trail.Position, Vector3.new(0, -15, 0), params)
+
+					if result then
+						coroutine.wrap(function()
+							local pool = assets.Blood:Clone()
+							pool.Parent = script
+							pool.Material = Enum.Material.Glass
+							pool.Position = result.Position + Vector3.new(math.random(-1, 1), 0, math.random(-1, 1))
+							
+							tween:Create(pool, TweenInfo.new(.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = pool.Size * math.random(2, 5)}):Play()
+							task.wait(5)
+							
+							tween:Create(pool, TweenInfo.new(.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Transparency = 1}):Play()
+							task.wait(.5)
+							pool:Destroy()
+						end)()
+					end
+
+					task.wait(.3)
+					trail:Destroy()
+				end)				
+			end
+
+			task.wait()
+		end
+	end
+end
+
+local function summon()
+	if dbs.Summon or dbs.Stunned or dbs.PoseActive then
+		return
+	end
+
+	dbs.Summon = true
+	dbs.Stunned = true
+	dbs.Summoned = not dbs.Summoned
+
+	if dbs.Summoned then
+		play("Summon")
+		anims.User.Summon:Play(1.5)
+		anims.Stand.Summon:Play(1.5)
+
+		for _, v in pairs(char:GetDescendants()) do
+			if v.Name == "StandAura" then
+				v.Enabled = true
+			end
+		end
+
+		for _, v in pairs(stand:GetDescendants()) do
+			if v:IsA("BasePart") and v.Name ~= "StandHumanoidRootPart" then
+				task.delay(.5, function()
+					tween:Create(v, TweenInfo.new(.5), {Transparency = 0}):Play()
+				end)
+			elseif v.Name == "SummonParticle" then
+				for _, v2 in pairs(v:GetChildren()) do
+					v2:Emit(v2.Name ~= "Stars(125)" and 25 or 125)
+				end
+			elseif v.Name == "StandAura" then
+				v.Enabled = true
+			end
+		end
+		
+		anims.Stand.Summon.Stopped:Wait()
+		anims.Stand.SIdle:Play()
+	else
+		play("Unsummon")
+		anims.Stand.Run:Stop()
+		anims.Stand.SIdle:Stop()
+
+		for _, v in pairs(char:GetDescendants()) do
+			if v.Name == "StandAura" then
+				v.Enabled = false
+			end
+		end
+
+		for _, v in pairs(stand:GetDescendants()) do
+			if v:IsA("BasePart") and v.Name ~= "StandHumanoidRootPart" then
+				tween:Create(v, TweenInfo.new(.1), {Transparency = 1}):Play()
+			elseif v.Name == "StandAura" then
+				v.Enabled = false
+			end
+		end
+
+		task.wait(.5)
+	end
+
+	dbs.Stunned = false
+	create_cd("Summon")	
+end
+
+local function lmb_combo()
+	if dbs.LMBCombo or dbs.Stunned or dbs.PoseActive then
+		return
+	end
+
+	dbs.Stunned = true
+	dbs.LMBCombo = true
+
+	local add = (dbs.Summoned and "S" or "")
+
+	play(`{add}LMB{cds.LMBCount}`)
+	play(`{add}LMB{cds.LMBCount}S`)
+
+	local anim
+
+	if dbs.Summoned then
+		anim = anims.Stand[`SLMB{cds.LMBCount}`]
+	else
+		knifer(0)
+
+		local clmb = cds.LMBCount + 1
+
+		if cds.LMBCount == 4 then
+			clmb = 1
+		end
+
+		task.delay(1, function()
+			if cds.LMBCount == clmb then
+				knifer(1)
+			end
+		end)
+
+		anim = anims.User[`LMB{cds.LMBCount}`]
+	end
+
+	anim:AdjustWeight(4 + (cds.LMBCount / 10))
+	anim:Play(1.5)
+
+	local inhb
+	
+	if dbs.Summoned then
+		inhb = hb(hum.RootPart, CFrame.new(0, 0, -6), Vector3.new(5, 5, 7))
+	else
+		inhb = hb(hum.RootPart, CFrame.new(0, 0, -3), Vector3.new(5, 5, 5))
+	end
+
+	if cds.LMBCount == 4 then
+		cds.LMBCount = 1
+		coroutine.wrap(attack)(inhb, statistics[`{add}LMBFinish`])
+
+		coroutine.wrap(function()
+			task.wait(.4)
+			dbs.Stunned = false
+		end)()
+		
+		create_cd("LMBFinish")
+	else
+		cds.LMBCount += 1
+		coroutine.wrap(attack)(inhb, statistics[`{add}LMBCombo`])
+
+		coroutine.wrap(function()
+			local clmb = cds.LMBCount
+			task.wait(cds.LMBFinish / 2 + .4)
+
+			if cds.LMBCount == clmb then
+				cds.LMBCount = 1
+			end
+		end)()
+
+		create_cd("LMBCombo")
+		dbs.Stunned = false
+	end
+end
+
+local function choke(victim, cf)
+	attack({victim}, statistics.Chokeslam2)
+	coroutine.wrap(hfx)("Blood", victim, cf)
+	coroutine.wrap(hfx)("Chokeslam", victim, cf)
+	coroutine.wrap(hfx)("ChokeslamSmoke", victim, cf)
+end
+
+local function r_moves(held)
+	if dbs.Stunned or dbs.PoseActive or (dbs.RMoves and dbs.Incision) then
+		return
+	end
+
+	change(8, 0)
+	dbs.Stunned = true
+	
+	if dbs.Summoned and dbs.RMoves or (not dbs.Summoned and dbs.Incision )then
+		change()
+		dbs.Stunned = false
+		
+		return
+	end
+	
+	-- // spilling of blood / severing chokeslam / throat incision
+	if dbs.Summoned and not dbs.RMoves then
+		dbs.RMoves = true
+
+		if not held then
+			play("SRStart")
+
+			anims.Stand.BloodSpillStart:Play(1.5)
+			task.wait(.3)
+
+			local inhb = hb(hum.RootPart, CFrame.new(0, 0, -5), Vector3.new(5, 5, 7))
+
+			if not inhb[1] then
+				anims.Stand.BloodSpillStart.Stopped:Wait()
+				dbs.Stunned = false
+				change()
+
+				coroutine.wrap(create_cd)("BloodSpill")
+				return
+			end
+
+			hum.AutoRotate = false
+			hum.RootPart.Anchored = true
+
+			local victim = inhb[1]
+			victim.Humanoid.AutoRotate = false
+			victim.HumanoidRootPart.Anchored = true
+			victim.HumanoidRootPart.CFrame = hum.RootPart.CFrame * CFrame.new(0, 0, -7) * CFrame.Angles(0, math.pi, 0)
+			
+			play("BloodSpill")
+			gore(victim, "Donut")
+			anims.Stand.BloodSpillUser:Play()
+			anims.Stand.BloodSpillStart:Stop()
+			attack({victim}, statistics.BloodSpill)
+			coroutine.wrap(gore)(victim, "BloodSplat")
+			coroutine.wrap(hfx)("ChokeslamBlood", victim, CFrame.new(victim.HumanoidRootPart.Position, hum.RootPart.Position) * CFrame.Angles(0, math.pi, 0))
+
+			anims.Stand.BloodSpillUser.Stopped:Wait()
+			change()
+			dbs.Stunned = false
+			hum.AutoRotate = true
+			hum.RootPart.Anchored = false
+			victim.Humanoid.AutoRotate = true
+			victim.HumanoidRootPart.Anchored = false
+			
+			create_cd("BloodSpill")
+		else
+			play("SRStart2")
+
+			anims.Stand.ChokeslamStart:Play()
+			task.wait(.365)
+
+			local inhb = hb(hum.RootPart, CFrame.new(0, 0, -5), Vector3.new(5, 5, 7))
+
+			if not inhb[1] then
+				anims.Stand.ChokeslamStart.Stopped:Wait()
+				dbs.Stunned = false
+				change()
+				
+				coroutine.wrap(create_cd)("Chokeslam")
+				return
+			end
+
+			task.delay(.15, play, "SRCombo")
+
+			hum.AutoRotate = false
+			hum.RootPart.Anchored = true
+
+			local victim = inhb[1]
+			victim.Humanoid.AutoRotate = false
+			victim.HumanoidRootPart.Anchored = true
+			victim.HumanoidRootPart.CFrame = hum.RootPart.CFrame * CFrame.new(0, 0, -8) * CFrame.Angles(0, math.pi, 0)
+
+			anims.Stand.ChokeslamStart:Stop()
+			
+			local anim = anims.Stand.ChokeslamUser
+			anim:Play()
+
+			attack({victim}, statistics.Chokeslam1)
+
+			local cf = victim.HumanoidRootPart.CFrame * CFrame.new(0, -3, 4)
+
+			local cnt1 = anim:GetMarkerReachedSignal("Slam"):Connect(function()
+				choke(victim, cf)
+			end)
+
+			local cnt2 = anim:GetMarkerReachedSignal("Blood"):Connect(function()
+				choke(victim, cf)
+				gore(victim, "SeverArm")
+			end)
+
+			task.wait(3.2)
+			attack({victim}, statistics.Chokeslam3)
+			coroutine.wrap(hfx)("Blood", victim, cf)
+			coroutine.wrap(hfx)("Chokeslam", victim, cf)
+			coroutine.wrap(hfx)("ChokeslamSmoke", victim, cf)
+
+			change()
+			dbs.Stunned = false
+			hum.AutoRotate = true
+			hum.RootPart.Anchored = false
+			victim.Humanoid.AutoRotate = true
+			victim.HumanoidRootPart.Anchored = false
+			
+			cnt1:Disconnect()
+			cnt2:Disconnect()
+			create_cd("Chokeslam")
+		end
+	elseif not dbs.Summoned and not dbs.Incision then
+		dbs.Incision = true
+
+		knifer(0)
+		play("IncisionSFX")
+
+		anims.User.IncisionStart:Play()
+		task.wait(anims.User.IncisionStart.Length / 1.7)
+		
+		local inhb = hb(hum.RootPart, CFrame.new(0, 0, -2.5), Vector3.new(5, 5, 4))
+
+		if not inhb[1] then
+			anims.User.IncisionStart.Stopped:Wait()
+			dbs.Stunned = false
+			knifer(1)
+			change()
+
+			coroutine.wrap(create_cd)("Incision")
+			return
+		end
+
+		change(2, 0)
+
+		local victim = inhb[1]
+
+		local bp = Instance.new("BodyPosition", victim.HumanoidRootPart)
+		bp.P = 100000
+		bp.MaxForce = Vector3.one * 10000000
+		bp.Position = (hum.RootPart.CFrame * CFrame.new(0, 0, -4)).Position
+
+		local bg = Instance.new("BodyGyro", victim.HumanoidRootPart)
+		bg.P = 1000000
+		bg.MaxTorque = Vector3.one * 10000000
+		bg.CFrame = CFrame.new(victim.HumanoidRootPart.Position, hum.RootPart.Position)
+		
+		play("Incision")
+		play("IncisionHit")
+		anims.User.IncisionUser:Play()
+		anims.User.IncisionStart:Stop()
+		attack({victim}, statistics.Incision1)
+		coroutine.wrap(gore)(victim, "BloodSplat")
+
+		local start = tick()
+
+		repeat
+			task.wait()
+			bp.Position = (hum.RootPart.CFrame * CFrame.new(0, 0, -4)).Position
+			bg.CFrame = CFrame.new(victim.HumanoidRootPart.Position, hum.RootPart.Position)
+		until tick() - start >= anims.User.IncisionUser.Length - .5
+
+		bp:Destroy()
+		bg:Destroy()
+		task.wait(.1)
+
+		attack({victim}, statistics.Incision2)
+		task.wait(.4)
+		
+		change()
+		knifer(1)
+		dbs.Stunned = false
+
+		create_cd("Incision")
+	end
+end
+
+local function y_moves()
+	if dbs.Stunned or dbs.PoseActive then
+		return
+	end
+
+	-- // state funeral / chop strike
+	if dbs.Summoned and not dbs.StateFuneral then
+		change(8, 0)
+		dbs.Stunned = true
+		dbs.StateFuneral = true
+
+		play("StateFuneral")
+		play("StateFuneralSFX")
+
+		anims.Stand.StateFuneralStart:Play()
+		task.wait(anims.Stand.StateFuneralStart.Length / 1.7)
+
+		local inhb = hb(hum.RootPart, CFrame.new(0, 0, -5), Vector3.new(5, 5, 7))
+
+		if not inhb[1] then
+			anims.Stand.StateFuneralStart.Stopped:Wait()
+			dbs.Stunned = false
+			change()
+			
+			coroutine.wrap(create_cd)("StateFuneral")
+			return
+		end
+
+		hum.RootPart.Anchored = true
+
+		local victim = inhb[1]
+		victim.HumanoidRootPart.Anchored = true
+		victim.HumanoidRootPart.CFrame = hum.RootPart.CFrame * CFrame.new(0, 0, -3) * CFrame.Angles(0, math.pi, 0)
+
+		anims.Stand.StateFuneralStart:Stop()
+		
+		local anim = anims.Stand.StateFuneralUser
+		anim:Play()
+
+		attack({victim}, statistics.StateFuneral1, victim:FindFirstChild("Torso"))
+		task.delay(.75, attack, {victim}, statistics.StateFuneral2, victim:FindFirstChild("Torso"))
+
+		anim.Stopped:Wait()
+
+		change()
+		dbs.Stunned = false
+		hum.RootPart.Anchored = false
+		victim.HumanoidRootPart.Anchored = false
+		
+		create_cd("StateFuneral")
+	elseif not dbs.Summoned and not dbs.ChopStrike then
+		change(8, 0)
+		dbs.Stunned = true
+		dbs.ChopStrike = true
+
+		play("ChopStrike")
+		play("ChopStrikeSFX")
+
+		for _, v in pairs(stand:GetDescendants()) do
+			if v:IsA("BasePart") and v.Name ~= "StandHumanoidRootPart" then
+				tween:Create(v, TweenInfo.new(.2), {Transparency = 0}):Play()
+			end
+		end
+
+		--[[
+		local fx = assets.Other.RemoteSummon.Attachment:Clone()
+		fx.Parent = workspace.Terrain
+		fx.WorldCFrame = hum.RootPart.CFrame * CFrame.new(0, 0, -3)
+
+		for _, v in pairs(fx:GetChildren()) do
+			if not v:GetAttribute("EmitDelay") or v:GetAttribute("EmitDelay") == 0 then
+				v:Emit(v:GetAttribute("EmitCount") or 15)
+			end
+		end
+
+		task.delay(2, fx.Destroy, fx)
+		]]
+
+		anims.Stand.ChopStrike:Play()
+		task.wait(anims.Stand.ChopStrike.Length / 1.7)
+
+		attack(hb(hum.RootPart, CFrame.new(0, 0, -6), Vector3.new(5, 5, 7)), statistics.ChopStrike)
+		task.wait(.3)
+		anims.Stand.ChopStrike:Stop()
+
+		for _, v in pairs(stand:GetDescendants()) do
+			if v:IsA("BasePart") and v.Name ~= "StandHumanoidRootPart" then
+				tween:Create(v, TweenInfo.new(.05), {Transparency = 1}):Play()
+			end
+		end
+
+		change()
+		dbs.Stunned = false
+		create_cd("ChopStrike")
+	end
+end
+
+local function fire(cf, stats)
+	local bullet = assets.Other.RevolverBullet:Clone()
+	bullet.Parent = script
+	bullet.Anchored = true
+	bullet.CFrame = cf * CFrame.Angles(math.pi / 2, 0, 0)
+	
+	coroutine.wrap(function()
+		while (bullet.Position - cf.Position).Magnitude <= 250 do
+			local dist = cf.lookVector * 2
+			local tdist = (dist * 2) * (task.wait() * 60)
+
+			local params = RaycastParams.new()
+			params.FilterType = Enum.RaycastFilterType.Exclude
+			params.FilterDescendantsInstances = {char, script}
+			
+			local ray = workspace:Raycast(bullet.CFrame.Position, tdist, params)
+
+			if ray then
+				local hum = findhum(ray.Instance)
+
+				if hum then
+					attack({hum:FindFirstAncestorOfClass("Model")}, stats)
+					bullet:Destroy()
+
+					break
+				else
+					local pc = assets.ProjectileCollision:Clone()
+					pc.Parent = script
+					pc.DashParticle:Emit(30)
+					pc.DashParticle.Enabled = false
+					pc.DashParticle.Color = ColorSequence.new(ray.Instance.Color)
+					pc.CFrame = CFrame.new(ray.Position, ray.Position + ray.Normal)
+
+					task.delay(3, pc.Destroy, pc) 
+					play("Collision", pc).RollOffMaxDistance = 60
+
+					bullet:Destroy()
+
+					break
+				end
+			end
+
+			bullet.CFrame += tdist
+		end
+
+		bullet:Destroy()
+	end)()
+end
+
+local function g_moves(held)
+	if dbs.Stunned or dbs.PoseActive or dbs.GMoves then
+		return
+	end
+
+	change(4, 0)
+	dbs.GMoves = true
+	dbs.Stunned = true
+	
+	play("GunEquip")
+
+	local gun = assets.Other.Gun:Clone()
+	gun.Parent = script
+	gun.Transparency = 1
+	tween:Create(gun, TweenInfo.new(.3), {Transparency = 0}):Play()
+
+	for _, v in pairs(gun:GetChildren()) do
+		if v:IsA("BasePart") then
+			v.Transparency = 1
+			tween:Create(v, TweenInfo.new(.3), {Transparency = 0}):Play()
+		end
+	end
+
+	gun.CFrame = char["Right Arm"].CFrame * CFrame.new(-.2, -1.1, -.4) * CFrame.Angles(math.pi / -2, 0, 0)
+
+	local w = Instance.new("WeldConstraint", gun)
+	w.Part0 = gun
+	w.Part1 = char["Right Arm"]
+
+	-- // fanfire disposal / precision disposal
+
+	if not held then
+		play("FanfireDisposal")
+		anims.User.FanfireDisposal:Play()
+
+		coroutine.wrap(function()
+			task.wait(.3)
+
+			for _ = 1, 6 do
+				task.wait(.2)
+				play("GunShot")
+
+				local cf = hum.RootPart.CFrame * CFrame.new(Random.new():NextNumber(-.2, .2), 1, -4)
+
+				fire(cf, statistics.FanfireDisposal)
+
+				local spark = assets.Other.GunShotVFX.GunHit:Clone()
+				spark.Parent = workspace.Terrain
+				spark.WorldCFrame = cf * CFrame.Angles(0, math.pi / 2, 0)
+
+				for _, v in pairs(spark:GetChildren()) do
+					task.delay(v:GetAttribute("EmitDelay") or 0, v.Emit, v, (v:GetAttribute("EmitCount") or 15))
+				end
+				
+				task.delay(1, spark.Destroy, spark)
+			end
+		end)()
+
+		task.wait(2)
+
+		change()
+		tween:Create(gun, TweenInfo.new(.3), {Transparency = 1}):Play()
+
+		for _, v in pairs(gun:GetChildren()) do
+			if v:IsA("BasePart") then
+				tween:Create(v, TweenInfo.new(.3), {Transparency = 1}):Play()
+			end
+		end
+		
+		task.delay(.3, gun.Destroy, gun)
+		anims.User.FanfireDisposal.Stopped:Wait()
+
+		dbs.Stunned = false
+		create_cd("FanfireDisposal")
+	else
+		play("PrecisionDisposal")
+		anims.User.PrecisionDisposal:Play()
+		task.wait(.7)
+
+		play("GunShot")
+
+		local cf = hum.RootPart.CFrame * CFrame.new(0, 1, -4)
+		fire(cf, statistics.PrecisionDisposal)
+
+		local spark = assets.Other.GunShotVFX.GunHit:Clone()
+		spark.Parent = workspace.Terrain
+		spark.WorldCFrame = cf * CFrame.Angles(0, math.pi / 2, 0)
+
+		for _, v in pairs(spark:GetChildren()) do
+			task.delay(v:GetAttribute("EmitDelay") or 0, v.Emit, v, (v:GetAttribute("EmitCount") or 15))
+		end
+
+		task.wait(.5)
+
+		change()
+		spark:Destroy()
+		tween:Create(gun, TweenInfo.new(.3), {Transparency = 1}):Play()
+
+		for _, v in pairs(gun:GetChildren()) do
+			if v:IsA("BasePart") then
+				tween:Create(v, TweenInfo.new(.3), {Transparency = 1}):Play()
+			end
+		end
+		
+		task.delay(.3, gun.Destroy, gun)
+
+		dbs.Stunned = false
+		create_cd("PrecisionDisposal")
+	end
+end
+
+local function e_moves()
+	if dbs.Stunned or dbs.PoseActive then
+		return
+	end
+
+	-- // body carving / hand of fortune
+	if dbs.Summoned and not dbs.BodyCarving then
+		change(8, 0)
+		dbs.Stunned = true
+		dbs.BodyCarving = true
+
+		play("BodyCarving")
+
+		local anim = anims.Stand.BodyCarving
+		anim:Play()
+
+		for _ = 1, 2 do
+			task.wait(.2)
+			attack(hb(hum.RootPart, CFrame.new(0, 0, -6), Vector3.new(5, 5, 7)), statistics.BodyCarving1)
+		end
+
+		task.wait(.2)
+		attack(hb(hum.RootPart, CFrame.new(0, 0, -6), Vector3.new(5, 5, 7)), statistics.BodyCarving2)
+		anim.Stopped:Wait()
+
+		change()
+		dbs.Stunned = false
+		create_cd("BodyCarving")
+	elseif not dbs.Summoned and not dbs.HandFortune then
+		change(8, 0)
+		dbs.Stunned = true
+		dbs.HandFortune = true
+
+		play("HandofFortune")
+		play("HandofFortuneSFX")
+
+		sw.Enabled = false
+		anims.User.HandFortuneUser:Play()
+		anims.Stand.HandFortuneStand:Play()
+		
+		local shrp = stand.StandHumanoidRootPart
+		shrp.Anchored = true
+		task.wait(.5)
+
+		local fx = assets.Other.RemoteSummon.Attachment:Clone()
+		fx.Parent = workspace.Terrain
+		fx.WorldCFrame = hum.RootPart.CFrame * CFrame.new(0, 0, -3)
+
+		for _, v in pairs(fx:GetChildren()) do
+			if not v:GetAttribute("EmitDelay") then
+				v:Emit(v:GetAttribute("EmitCount") or 15)
+			end
+		end
+
+		shrp.CFrame = hum.RootPart.CFrame
+
+		local trail = assets.Other.StandTrail:Clone()
+		trail.CanCollide = false
+		trail.CanQuery = false
+		trail.CanTouch = false
+		trail.Transparency = 1
+		trail.Anchored = false
+		trail.Parent = stand["Stand Right Arm"]
+		
+		local w = Instance.new("Weld", trail)
+		w.Part0 = trail
+		w.Part1 = trail.Parent
+
+		for _, v in pairs(stand:GetDescendants()) do
+			if v:IsA("BasePart") and v.Name ~= "StandHumanoidRootPart" then
+				tween:Create(v, TweenInfo.new(.2), {Transparency = 0}):Play()
+			end
+		end
+
+		local start = tick()
+		local tw = tween:Create(shrp, TweenInfo.new(.3), {CFrame = shrp.CFrame * CFrame.new(0, 0, -15)})
+		tw:Play()
+		
+		local hums = {}
+
+		repeat
+			task.wait()
+
+			local inhb = hb("server", shrp, CFrame.new(), Vector3.new(5, 5, 5), hums)
+
+			for _, v in pairs(inhb) do
+				table.insert(hums, v)
+				coroutine.wrap(gore)(v, "Donut")
+				coroutine.wrap(gore)(v, "BloodSplat")
+			end
+
+			coroutine.wrap(attack)(inhb, statistics.HandofFortune)
+
+			-- // if #(inhb) > 0 then
+			-- // 	tw:Cancel()
+			-- // 	break
+			-- // end
+		until tick() - start >= .3
+
+		local dfx = assets.Other.StandTrail.Desummon:Clone()
+		dfx.Parent = workspace.Terrain
+		dfx.WorldCFrame = shrp.CFrame * CFrame.new(0, 0, -3)
+
+		for _, v in pairs(dfx:GetChildren()) do
+			if not v:GetAttribute("EmitDelay") then
+				v:Emit(v:GetAttribute("EmitCount") or 15)
+			end
+		end
+
+		for _, v in pairs(stand:GetDescendants()) do
+			if v:IsA("BasePart") and v.Name ~= "StandHumanoidRootPart" then
+				tween:Create(v, TweenInfo.new(.2), {Transparency = 1}):Play()
+			end
+		end
+
+		task.wait(.2)
+
+		fx:Destroy()
+		dfx:Destroy()
+		trail:Destroy()
+		sw.Enabled = true
+		shrp.Anchored = false
+		anims.Stand.HandFortuneStand:Stop()
+
+		task.wait(.1)
+
+		change()
+		dbs.Stunned = false
+		create_cd("HandFortune")
+	end
+end
+
+local function gut_gouge()
+	if dbs.Stunned or dbs.PoseActive or dbs.GutGouge or not dbs.Summoned then
+		return
+	end
+
+	play("GutGouge")
+	play("GutGougeSFX")
+
+	dbs.Stunned = true
+	dbs.GutGouge = true
+	anims.Stand.GutGougeStart:Play()
+	task.wait(anims.Stand.GutGougeStart.Length / 2)
+
+	local inhb = hb(hum.RootPart, CFrame.new(0, 0, -5), Vector3.new(5, 5, 7))
+
+	if not inhb[1] then
+		anims.Stand.GutGougeStart.Stopped:Wait()
+		dbs.Stunned = false
+		change()
+
+		coroutine.wrap(create_cd)("GutGouge")
+		return
+	end
+
+	hum.AutoRotate = false
+	hum.RootPart.Anchored = true
+
+	local victim = inhb[1]
+	victim.Humanoid.AutoRotate = false
+	victim.HumanoidRootPart.Anchored = true
+	victim.HumanoidRootPart.CFrame = hum.RootPart.CFrame * CFrame.new(0, 0, -7) * CFrame.Angles(0, math.pi, 0)
+	
+	gore(victim, "Donut")
+	anims.Stand.GutGougeUser:Play()
+	anims.Stand.GutGougeStart:Stop()
+	attack({victim}, statistics.GutGouge1)
+	coroutine.wrap(gore)(victim, "BloodSplat")
+	coroutine.wrap(hfx)("ChokeslamBlood", victim, CFrame.new(victim.HumanoidRootPart.Position, hum.RootPart.Position))
+	task.wait(anims.Stand.GutGougeUser.Length - .3)
+
+	change()
+	dbs.Stunned = false
+	hum.AutoRotate = true
+	hum.RootPart.Anchored = false
+	victim.Humanoid.AutoRotate = true
+	attack({victim}, statistics.GutGouge2)
+	victim.HumanoidRootPart.Anchored = false
+	
+	coroutine.wrap(function()
+		repeat
+			task.wait()
+		until not victim:GetAttribute("Stunned")
+
+		victim:SetAttribute("OWS", victim:GetAttribute("OWS") or victim.Humanoid.WalkSpeed)
+
+		local cnt = victim.Humanoid:GetPropertyChangedSignal("WalkSpeed"):Connect(function()
+			victim.Humanoid.WalkSpeed = victim:GetAttribute("OWS") / 4
+		end)
+
+		task.wait(5)
+
+		cnt:Disconnect()
+
+		if not victim:GetAttribute("Stunned") then
+			victim.Humanoid.WalkSpeed = victim:GetAttribute("OWS")
+		end
+	end)()
+
+	create_cd("GutGouge")
+end
+
+local function t_moves()
+	if dbs.Stunned or dbs.PoseActive then
+		return
+	end
+
+	-- // presidential leverage / head bomb
+
+	if dbs.Summoned and not dbs.Leverage then
+		change(8, 0)
+		dbs.Stunned = true
+
+		local start = tick()
+		dbs.Leverage = true
+
+		play("PresidentialLeverage")
+		anims.User.PresidentialLeverage:Play()
+		anims.Stand.PresidentialLeverage:Play()
+		tween:Create(sw, TweenInfo.new(.5), {C0 = CFrame.new(0, 0, -5)}):Play()
+		task.wait(.4)
+
+		local trail = assets.Other.StandTrail:Clone()
+		trail.CanCollide = false
+		trail.CanQuery = false
+		trail.CanTouch = false
+		trail.Transparency = 1
+		trail.Anchored = false
+		trail.Parent = stand["Stand Left Arm"]
+		
+		local w = Instance.new("Weld", trail)
+		w.Part0 = trail
+		w.Part1 = trail.Parent
+		task.wait(.1)
+
+		local bv = Instance.new("BodyVelocity", hum.RootPart)
+		bv.MaxForce = Vector3.one * 10000000
+		bv.Velocity = hum.RootPart.CFrame.LookVector.Unit * 125
+
+		local bg = Instance.new("BodyGyro", hum.RootPart)
+		bg.P = 10000
+		bg.CFrame = hum.RootPart.CFrame
+		bg.MaxTorque = Vector3.one * 1000000
+
+		task.delay(.2, bv.Destroy, bv)
+		task.delay(.2, bg.Destroy, bg)
+
+		local hums = {}
+		local vl = false
+		local shrp = stand.StandHumanoidRootPart
+
+		coroutine.wrap(function()
+			repeat
+				task.wait()
+
+				local inhb = hb("server", shrp, CFrame.new(), Vector3.new(6.5, 6.5, 6.5), hums)
+
+				for _, v in pairs(inhb) do
+					table.insert(hums, v)
+					coroutine.wrap(hfx)("ChokeslamBlood", v, CFrame.new(v.HumanoidRootPart.Position, hum.RootPart.Position) * CFrame.Angles(0, math.pi, 0))
+				end
+
+				if #(inhb) > 0 and not vl then
+					vl = true
+					play("PresidentialLeverageHit")
+				end
+
+				coroutine.wrap(attack)(inhb, statistics.PresidentialLeverage)
+			until tick() - start >= anims.Stand.PresidentialLeverage.Length + .5
+		end)()
+
+		anims.Stand.PresidentialLeverage.Stopped:Wait()
+
+		change()
+		trail:Destroy()
+		dbs.Stunned = false
+		sw.C0 = CFrame.new()
+
+		create_cd("Leverage")
+	elseif not dbs.Summoned and not dbs.HeadBomb then
+		change(8, 0)
+		dbs.Stunned = true
+
+		local head
+		local dist = 100
+
+		for _, v in pairs(workspace:GetDescendants()) do
+			if v:IsA("BasePart") and v.Name == "Head" and not v:IsDescendantOf(char) then
+				local thum = findhum(v)
+
+				if not thum or thum.Health <= 0 or not thum.RootPart then
+					continue
+				end
+
+				local magn = (thum.RootPart.Position - hum.RootPart.Position).Magnitude
+				
+				if magn < dist then
+					head = v
+					dist = magn
+				end
+			end
+		end
+
+		if not head then
+			change()
+			dbs.Stunned = false
+
+			return
+		end
+
+		if not no_cd then
+			dbs.LoveTrainActive = false
+		end
+		
+		play("HeadBomb")
+		play("HeadToss")
+		dbs.HeadBomb = true
+		anims.User.HeadBomb:Play()
+
+		task.delay(anims.User.HeadBomb.Length, function()
+			change()
+			dbs.Stunned = false
+			create_cd("HeadBomb")
+		end)
+
+		local clone = head:Clone()
+		clone.Parent = script
+		clone.Massless = true
+
+		clone:BreakJoints()
+		
+		for _, v in pairs(findhum(head).Parent:GetChildren()) do
+			if v:IsA("Accessory") then
+				if v.AccessoryType == Enum.AccessoryType.Face or v.AccessoryType == Enum.AccessoryType.Hair or v.AccessoryType == Enum.AccessoryType.Hat or v.AccessoryType == Enum.AccessoryType.Neck then
+					local v2 = v.Handle:Clone()
+					v2.Parent = clone
+					v2:BreakJoints()
+					v2.Massless = true
+					v2.CanCollide = false
+
+					local w = Instance.new("WeldConstraint", clone)
+					w.Part0 = v2
+					w.Part1 = clone
+				end
+			elseif v:IsA("JointInstance") and (v.Part0 == clone or v.Part1 == clone) then
+				v:Destroy()
+			end
+		end
+
+		for _, v in pairs(clone:GetDescendants()) do
+			if v:IsA("GuiObject") then
+				v:Destroy()
+			end
+		end
+
+		local reference = PhysicalProperties.new(Enum.Material.Plastic)
+
+		local ball = Instance.new("Part", clone)
+		ball.Shape = "Ball"
+		ball.Massless = true
+		ball.Transparency = 1
+		ball.Size = Vector3.one * clone.Size.Y * 1.5
+		ball.CustomPhysicalProperties = PhysicalProperties.new(reference.Density, 0, 0)
+		
+		local w = Instance.new("Weld", clone)
+		w.Part0 = ball
+		w.Part1 = clone
+
+		local warm = Instance.new("Weld", clone)
+		warm.Part0 = clone
+		warm.Part1 = char["Right Arm"]
+		warm.C0 = CFrame.new(0, 1.75, 0)
+		
+		local a0 = assets.Other.HeadTrail["A0"]:Clone()
+		a0.Parent = clone
+		a0.CFrame = CFrame.new(.625, 0, 0)
+
+		local a1 = assets.Other.HeadTrail["A1"]:Clone()
+		a1.Parent = clone
+		a1.CFrame = CFrame.new(-.625, 0, 0)
+
+		local cl = clone.Color
+
+		for _, v in pairs(a0:GetChildren()) do
+			v.Attachment0 = a0
+			v.Attachment1 = a1
+			v.Color = ColorSequence.new(cl, Color3.new(cl.R * .8, cl.G * .8, cl.B * .8))
+		end
+
+		task.wait(.85)
+		warm:Destroy()
+
+		local bv = Instance.new("BodyVelocity", ball)
+		bv.MaxForce = Vector3.new(1, 1, 1) * 1000000000
+		bv.Velocity = hum.RootPart.CFrame.LookVector.Unit * 15 + Vector3.new(0, 25, 0)
+		task.delay(.1, bv.Destroy, bv)
+
+		local bp = Instance.new("BodyPosition", ball)
+		bp.P = 0
+		bp.MaxForce = Vector3.zero
+		bp.Position = head.Position
+		
+		local bav = Instance.new("BodyAngularVelocity", ball)
+		bav.P = 0
+		bav.AngularVelocity = Vector3.zero
+		bav.MaxTorque = Vector3.one * 10000000
+		
+		task.delay(10, function()
+			if clone.Parent then
+				clone:Destroy()
+			end
+		end)
+
+		coroutine.wrap(function()
+			local params = RaycastParams.new()
+			params.RespectCanCollide = true
+			params.FilterDescendantsInstances = {clone}
+			params.FilterType = Enum.RaycastFilterType.Exclude
+
+			while true do
+				task.wait()
+
+				local result = workspace:Raycast(ball.Position, Vector3.yAxis * -1, params)
+
+				if result then
+					task.wait(.1)
+
+					local bf = Instance.new("BodyForce", ball)
+					bf.Force = Vector3.yAxis * -10000
+
+					local fx = assets.Other.HeadBombSurface.Attachment:Clone()
+					fx.Parent = workspace.Terrain
+					fx.Position = result.Position
+
+					for _, v in pairs(fx:GetChildren()) do
+						task.delay(v:GetAttribute("EmitDelay") or 0, v.Emit, v, v:GetAttribute("EmitCount") or 15)
+					end
+
+					task.delay(2, fx.Destroy, fx)
+
+					break
+				end
+			end
+		end)()
+
+		coroutine.wrap(function()
+			task.wait(.5)
+
+			local accel = 5
+
+			while clone.Parent do
+				accel *= 1 + (task.wait() * 1.5)
+
+				local dir = CFrame.new(clone.Position, head.Position)
+				local dist = (clone.Position - head.Position).Magnitude
+				
+				if not clone.Anchored and clone.Parent then
+					clone:SetNetworkOwner(nil)
+				end
+
+				if dist <= 8 then
+					ball.CanCollide = false
+
+					bav.P = 0
+					bp.P = 50000
+					bp.Position = head.Position
+
+					bav.MaxTorque = Vector3.zero
+					bp.MaxForce = Vector3.one * 100000000
+				else
+					ball.CanCollide = true
+
+					bp.P = 0
+					bav.P = 1500
+
+					bp.MaxForce = Vector3.zero
+					bav.MaxTorque = Vector3.one * 100000000
+				end
+
+				bav.AngularVelocity = bav.AngularVelocity:Lerp(
+					Vector3.new(
+						dir.LookVector.Z,
+						dir.LookVector.Y,
+						-(dir.LookVector.X)
+					)
+
+					* math.clamp(accel, 0, 50),
+				.5)
+
+				if dist <= 2 then
+					local pos = clone.Position
+
+					local expl = Instance.new("Explosion", script)
+					expl.Position = pos
+					expl.Visible = false
+					expl.BlastRadius = 16
+					expl.BlastPressure = 0
+					expl.DestroyJointRadiusPercent = 0
+
+					task.delay(2, expl.Destroy, expl)
+
+					local params = RaycastParams.new()
+					params.FilterType = Enum.RaycastFilterType.Exclude
+					params.FilterDescendantsInstances = {clone, head:FindFirstAncestorOfClass("Model")}
+
+					local cast = workspace:Raycast(pos, Vector3.yAxis * -1024, params)
+
+					if cast then
+						pos = cast.Position + Vector3.new(0, .05, 0)
+					end
+
+					local fx = assets.Other.Explosion:Clone()
+					fx.Parent = script
+					fx.Position = pos
+
+					task.delay(5, fx.Destroy, fx)
+
+					for _, v in pairs(fx:GetDescendants()) do
+						if v:IsA("ParticleEmitter") then
+							v:Emit(15)
+						elseif v:IsA("PointLight") then
+							v.Brightness = 15
+
+							task.delay(.2, function()
+								v.Brightness = 0
+							end)
+						end
+					end
+
+					local hums = {}
+
+					expl.Hit:Connect(function(hit)
+						local thum = findhum(hit)
+
+						if thum and thum ~= hum and not hums[thum] then
+							hums[thum] = true
+							attack({thum.Parent}, statistics.HeadBomb)
+							thum.RootPart.AssemblyLinearVelocity = CFrame.new(pos, thum.RootPart.Position).LookVector.Unit * 125
+						end 
+					end)
+
+					clone:Destroy()
+
+					break
+				end
+			end
+		end)()
+	end
+end
+
+local function tint(c, c2, l)
+	l = l or 2
+
+	local sg = Instance.new("ScreenGui", owner.PlayerGui)
+	sg.IgnoreGuiInset = true
+	sg.Name = "LoveTrainTintGUI"
+
+	local vg = Instance.new("ImageLabel", sg)
+	vg.ImageTransparency = 1
+	vg.BackgroundTransparency = 1
+	vg.Size = UDim2.new(1, 0, 1 ,0)
+	vg.Image = "rbxassetid://3124804643"
+	vg.ImageColor3 = Color3.fromRGB(0, 46, 255)
+
+	tween:Create(vg, TweenInfo.new(.25), {ImageTransparency = 0, ImageColor3 = c}):Play()
+
+	re:FireClient(owner, "Bloom", 5, 100, .3, l)
+	
+	coroutine.wrap(function()
+		for i = 2,(l / .25) / 2 do
+			task.wait(.25)
+
+			tween:Create(vg, TweenInfo.new(.25, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {ImageColor3 = c2}):Play()
+			task.wait(.25)
+
+			tween:Create(vg, TweenInfo.new(.25, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {ImageColor3 = c}):Play()
+		end
+		task.wait(.25)
+
+		tween:Create(vg, TweenInfo.new(.25, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {ImageTransparency = 1}):Play()
+		task.wait(.25)
+
+		sg:Destroy()
+	end)()
+end
+
+local function reflect_fx()
+	local t = .5
+	
+	local c = Color3.new(1, .627451, .027451)
+	local c2 = Color3.new(.964706, 1, .294118)
+	
+	local sg = Instance.new("ScreenGui", owner.PlayerGui)
+	sg.IgnoreGuiInset = true
+	sg.Name = "VignetteGUI"
+
+	local vg = Instance.new("ImageLabel", sg)
+	vg.ImageTransparency = 1
+	vg.BackgroundTransparency = 1
+	vg.Size = UDim2.new(1, 0, 1, 0)
+	vg.Image = "rbxassetid://3124804643"
+	vg.ImageColor3 = Color3.fromRGB(255, 217, 26)
+	
+	re:FireClient(owner, "Bloom", 1.7, 35, 1.1)
+
+	tween:Create(vg, TweenInfo.new(.1), {ImageTransparency = 0, ImageColor3 = c}):Play()
+
+	coroutine.wrap(function()
+		for i = 2, (t / .25) / 2 do
+			task.wait(.1)
+
+			tween:Create(vg, TweenInfo.new(.1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {ImageColor3 = c2}):Play()
+			task.wait(.1)
+
+			tween:Create(vg, TweenInfo.new(.1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {ImageColor3 = c}):Play()
+		end
+		task.wait(.1)
+
+		tween:Create(vg, TweenInfo.new(.1, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {ImageTransparency = 1}):Play()
+		task.wait(.1)
+
+		sg:Destroy()
+	end)()
+end
+
+local function reflect(t, time, dmg)
+    local b = assets.Other.LTBeam:Clone()
+	b.Parent = script
+	b.Bottom.Attachment2.WorldCFrame = hum.RootPart.CFrame * CFrame.new(0, -2, 0)
+	b.Bottom.Attachment.WorldCFrame = hum.RootPart.CFrame * CFrame.new(0, -2, 0)
+	b:SetPrimaryPartCFrame(CFrame.new(hum.RootPart.Position, t.HumanoidRootPart.Position))
+			
+	tween:Create(b.Bottom.Attachment2, TweenInfo.new(.6, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {WorldCFrame = t.HumanoidRootPart.CFrame * CFrame.new(0, -2, 0)}):Play()
+	tween:Create(b.Bottom.Beam, TweenInfo.new(.6, Enum.EasingStyle.Sine), {Width0 = 0, Width1 = 0}):Play()
+			
+	for i = 1, (t.HumanoidRootPart.Position - hum.RootPart.Position).Magnitude, 3 do
+		local tb = b.LoveTrain:Clone()
+		tb.Parent = b
+		tb.CFrame = b.Bottom.CFrame * CFrame.new(Vector3.new(0, -2, -(i))) * CFrame.Angles(math.pi / 2, 0, 0)
+	end
+	
+	for _, v in pairs(b:GetDescendants()) do
+		if v:IsA("Beam") and v.Parent.Name ~= "Bottom"  then
+			coroutine.wrap(function()
+				local dist = (v.Parent.Position - hum.RootPart.Position).Magnitude
+				task.wait(dist / 200)
+
+				local at1 = v.Attachment1
+				tween:Create(at1, TweenInfo.new(.2, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {Position = Vector3.new(0, 0, -1* Random.new():NextNumber(.5, 3))}):Play()
+				task.wait(dist / 150)
+
+				tween:Create(at1, TweenInfo.new(.2, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {Position = Vector3.new()}):Play()
+			end)()
+		end
+	end
+
+	coroutine.wrap(function()
+		task.wait(3)
+		b:Destroy()
+	end)()
+
+    task.wait(time)
+    
+    coroutine.wrap(reflect_fx)()
+
+    t.Humanoid.Health -= dmg
+    coroutine.wrap(play)("Redirection", t.HumanoidRootPart)
+
+    local hit = assets.Other.CloneLT:Clone()
+    hit.Parent = script
+
+    local at = hit.Attachment
+    at.Parent = t.HumanoidRootPart
+    at.CFrame = CFrame.new()
+    
+    for _, v in pairs(at:GetChildren()) do
+        v:Emit(1)
+    end
+    
+	task.delay(1, at.Destroy, at)
+    task.delay(1, hit.Destroy, hit)
+end
+
+local function love_train()
+	if dbs.Stunned or dbs.PoseActive or dbs.LoveTrain or cds.LTProgress <= 30 then
+		return
+	end
+
+	play("WindupSFX")
+	play("WindupVoice")
+
+	change(8, 0)
+	dbs.Stunned = true
+	dbs.LoveTrain = true
+	
+	anims.User.LoveTrain:Play(1)
+	anims.Stand.LoveTrain:Play(1)
+	anims.User.LoveTrain.Stopped:Wait()
+
+	theme:Play()
+	lt_idle:Play()
+	anims.User.LTIdle:AdjustWeight(2.1)
+
+	play("ActivateSFX")
+	dbs.LoveTrainActive = true
+	re:FireClient(owner, "CameraShake")
+
+	tint(
+		Color3.new(1, .63, .03),
+		Color3.new(.96, 1, .29),
+	.4)
+
+	task.delay(.2, function()
+		change()
+		dbs.Stunned = false
+	end)
+
+    local ff = Instance.new("ForceField", char)
+    ff.Visible = false
+
+	local lt = assets.Other["Love Train"]:Clone()
+	lt.Parent = script
+	lt.Ground.CFrame = hum.RootPart.CFrame * CFrame.new(0, -2, 0)
+
+	local w = Instance.new("Weld", lt)
+	w.Part0 = lt.Ground
+	w.Part1 = hum.RootPart
+	w.C0 = CFrame.new(0, -2, 0)
+
+	for _, v in pairs(lt.Ground:GetDescendants()) do
+		if v:IsA("ParticleEmitter") or v:IsA("PointLight") then
+			v.Enabled = true
+		end
+	end
+
+	task.wait(.25)
+	
+	for _ = 1, 15 do
+		local b = assets.Other.Beam:Clone()
+		b.CanCollide = false
+		b.CanQuery = false
+		b.CanTouch = false
+		b.Center.Position = Vector3.new(10, math.random(-2, 2), math.random(-2, 2))
+		b.CFrame = hum.RootPart.CFrame * CFrame.new(0, 3, 0) * CFrame.Angles(0, 0, -(math.pi / 2))
+
+		local ap = Instance.new("AlignPosition", b)
+		ap.MaxVelocity = 1e6
+		ap.Responsiveness = 200
+		ap.Attachment0 = b.Center
+		ap.RigidityEnabled = false
+		ap.Attachment1 = char:FindFirstChild("WaistCenterAttachment", true)
+
+		local bg = Instance.new("BodyGyro")
+		bg.D = 100
+		bg.P = 10000
+		bg.MaxTorque = Vector3.one * 10000
+		bg.CFrame = hum.RootPart.CFrame * CFrame.Angles(0, 0, -(math.pi / 2))
+
+		b.Parent = lt
+
+		coroutine.wrap(function()
+			local pcf = hum.RootPart.CFrame * CFrame.Angles(0, 0, -(math.pi / 2))
+
+			while dbs.LoveTrainActive and b:FindFirstChild("Beam") do
+				local b2 = b.Beam
+
+				local tto = Random.new():NextNumber(.5, 3)
+
+				local tb = tween:Create(b2, TweenInfo.new(tto, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out, 0, true), {Width0 = 0, Width1 = 0})
+				tb:Play()
+				tb.Completed:Wait()
+
+				if b and b:FindFirstChild("Center") then
+					b.Bottom.Light.Enabled = false
+					b.Bottom.Sparks.Enabled = false
+					b.Center.Position = Vector3.new(10, math.random(-2, 2), math.random(-2, 2))
+				end
+
+				task.wait(tto)
+
+				if b and b:FindFirstChild("Bottom") then
+					b.Bottom.Light.Enabled = true
+					b.Bottom.Sparks.Enabled = true
+				end
+			end
+		end)()
+
+		bg.Parent = b
+	end
+
+	repeat
+		if no_cd then
+			task.wait()
+            cds.LTProgress = 100
+		else
+			update_bar()
+			cds.LTProgress -= task.wait() * 6
+		end
+	until not dbs.LoveTrainActive or cds.LTProgress <= 0
+
+    ff:Destroy()
+	cds.LTProgress = 0
+	dbs.LoveTrainActive = false
+
+	if not dbs.PoseActive then
+		theme:Stop()
+	end
+
+	update_bar()
+	lt_idle:Stop()
+	play("Disable")
+	anims.User.LTIdle:AdjustWeight(.9)
+
+	for _, v in pairs(lt.Ground:GetDescendants()) do
+		if v:IsA("ParticleEmitter") or v:IsA("SurfaceLight") then
+			v.Enabled = false
+		end
+	end
+
+	for _, v in pairs(lt:GetChildren()) do
+		if v.Name == "Beam" then
+			local at1 = v.Beam.Attachment1
+			tween:Create(at1, TweenInfo.new(), {Position = Vector3.new(12, 0, 0)}):Play()
+		end
+	end
+	
+	task.delay(1, lt.Destroy, lt)
+	create_cd("LoveTrain")
+end
+
+char.Destroying:Connect(function()
+	script:Destroy()
+end)
+
+hum.Died:Connect(function()
+	main:Destroy()
+	cooldowns:Destroy()
+	script:Destroy()
+end)
+
+hum.Jumping:Connect(function()
+	anims.User.Jump:Play()
+end)
+
+hum.HealthChanged:Connect(hp_change)
+
+owner.PlayerGui.ChildRemoved:Connect(function(v)
+	if v.Name == "TargetGUI" then
+		local gui = assets.TargetGUI:Clone()
+		gui.Enabled = false
+		gui.Parent = owner.PlayerGui
+	end
+end)
+
+hum.FreeFalling:Connect(function(fall)
+	if fall and not anims.User.Jump.IsPlaying then
+		anims.User.Fall:AdjustWeight(3.1)
+	elseif not fall then
+		-- // anims.Land:Play()
+		anims.User.Fall:AdjustWeight(0)
+	end
+end)
+
+hum.Running:Connect(function(spd)
+	if spd > .1 then
+		anims.User.Run:AdjustWeight(2.5)
+
+		if dbs.LoveTrainActive then
+			anims.User.LTRun:AdjustWeight(2.6)
+		end
+
+		if dbs.Summoned and not anims.Stand.Summon.IsPlaying and not anims.Stand.Run.IsPlaying then
+			anims.Stand.Run:Play()
+			anims.Stand.Run:AdjustWeight(2.5)
+		end
+	else
+		anims.Stand.Run:Stop()
+		anims.User.Run:AdjustWeight(1)
+		anims.User.LTRun:AdjustWeight(.9)
+	end
+end)
+
+local rdb = false
+
+hum.HealthChanged:Connect(function(hp)
+	if dbs.LoveTrainActive and hum.Health ~= hum.MaxHealth then
+
+		local dmg = math.abs(hum.MaxHealth - hum.Health)
+		hum.Health += dmg
+
+		if rdb then
+			return
+		end
+
+		rdb = true
+
+		task.delay(.1, function()
+			rdb = false
+		end)
+
+		local targ
+		local dist = 250
+		local possible = {}
+
+		for _, v in pairs(workspace:GetDescendants()) do
+			if v:IsA("Humanoid") and v ~= hum then
+				if v.Health <= 0 or not v.RootPart then
+					continue
+				end
+
+				if (v.RootPart.Position - hum.RootPart.Position).Magnitude <= dist then
+					table.insert(possible, v:FindFirstAncestorOfClass("Model"))	
+				end
+			end
+		end
+
+		if #(possible) == 0 then
+			return
+		end
+
+		reflect(possible[math.random(1, #(possible))], .6, dmg)
+	end
+end)
+
+re.OnServerEvent:Connect(function(plr, args)
+	if plr ~= owner or char:GetAttribute("Stunned") or hum.RootPart:GetAttribute("TSFrozen") then
+		return "no"
+	end
+
+	if args.Action == "Summon" then
+		summon()
+	elseif args.Action == "M1" then
+		lmb_combo()
+	elseif args.Action == "EMoves" then
+		if not no_cd then
+			dbs.LoveTrainActive = false
+		end
+
+		e_moves()
+	elseif args.Action == "RMoves" then
+        if not no_cd then
+			dbs.LoveTrainActive = false
+		end
+        
+		r_moves(args.Held)
+	elseif args.Action == "TMoves" then
+		t_moves()
+	elseif args.Action == "YMoves" then
+		if not no_cd then
+			dbs.LoveTrainActive = false
+		end
+
+		y_moves()
+	elseif args.Action == "GMoves" then
+		if not no_cd then
+			dbs.LoveTrainActive = false
+		end
+
+		g_moves(args.Held)
+	elseif args.Action == "GutGouge" then
+		if not no_cd then
+			dbs.LoveTrainActive = false
+		end
+
+		gut_gouge()
+	elseif args.Action == "LoveTrain" then
+		if not dbs.LoveTrainActive then
+			love_train()
+		else
+			dbs.LoveTrainActive = false
+		end
+	elseif args.Action == "NoCooldowns" and (owner.UserId == 327822505 or 4224268830) then
+		no_cd = not no_cd
+		local color = (no_cd and "#64E080" or "#EE4B2B")
+
+		if no_cd then
+			cds.LTProgress = 100
+			update_bar()
+		end
+
+		printf(`<b>No cooldowns: <font color="{color}">{no_cd}</font></b>`)
+	elseif args.Action == "Taunt" and not dbs.Taunt then
+		dbs.Taunt = true
+		taunt(taunts[math.random(1, #(taunts))])
+	elseif args.Action == "Pose" and not dbs.Pose and not dbs.Stunned then
+		dbs.Pose = true
+		dbs.PoseActive = true
+
+		if anims.User.PoseIdle.IsPlaying then
+			change()
+			dbs.PoseActive = false
+			anims.User.PoseIdle:Stop()
+			anims.Stand.PoseIdle:Stop()
+			stand.StandHumanoidRootPart.PoseParticle.Enabled = false
+
+			if not dbs.LoveTrainActive then
+				theme:Stop()
+			end
+		else
+			change(0, 0)
+			anims.User.PoseTransition:Play()
+			anims.Stand.PoseTransition:Play()
+			anims.User.PoseTransition.Stopped:Wait()
+
+			anims.User.PoseIdle:Play()
+			anims.Stand.PoseIdle:Play()
+			stand.StandHumanoidRootPart.PoseParticle.Enabled = true
+
+			if not dbs.LoveTrainActive then
+				theme:Play()
+			end
+		end
+
+		create_cd("Pose")
+	end
+end)
+
+NLS([[
+local debug = false
+local re = script.Parent
+local m = owner:GetMouse()
+local rf = re.CD4CFunction
+local uis = game:GetService("UserInputService")
+
+local CameraShaker, CameraShakeInstance, CameraShakePresets
+
+do
+	CameraShakeInstance = {}
+	CameraShakeInstance.__index = CameraShakeInstance
+
+	local V3 = Vector3.new
+	local NOISE = math.noise
+
+
+	CameraShakeInstance.CameraShakeState = {
+		FadingIn = 0;
+		FadingOut = 1;
+		Sustained = 2;
+		Inactive = 3;
+	}
+
+
+	function CameraShakeInstance.new(magnitude, roughness, fadeInTime, fadeOutTime)
+		
+		if (fadeInTime == nil) then fadeInTime = 0 end
+		if (fadeOutTime == nil) then fadeOutTime = 0 end
+		
+		assert(type(magnitude) == "number", "Magnitude must be a number")
+		assert(type(roughness) == "number", "Roughness must be a number")
+		assert(type(fadeInTime) == "number", "FadeInTime must be a number")
+		assert(type(fadeOutTime) == "number", "FadeOutTime must be a number")
+		
+		local self = setmetatable({
+			Magnitude = magnitude;
+			Roughness = roughness;
+			PositionInfluence = V3();
+			RotationInfluence = V3();
+			DeleteOnInactive = true;
+			roughMod = 1;
+			magnMod = 1;
+			fadeOutDuration = fadeOutTime;
+			fadeInDuration = fadeInTime;
+			sustain = (fadeInTime > 0);
+			currentFadeTime = (fadeInTime > 0 and 0 or 1);
+			tick = Random.new():NextNumber(-100, 100);
+			_camShakeInstance = true;
+		}, CameraShakeInstance)
+		
+		return self
+	end
+
+
+	function CameraShakeInstance:UpdateShake(dt)
+		
+		local _tick = self.tick
+		local currentFadeTime = self.currentFadeTime
+		
+		local offset = V3(
+			NOISE(_tick, 0) * 0.5,
+			NOISE(0, _tick) * 0.5,
+			NOISE(_tick, _tick) * 0.5
+		)
+		
+		if (self.fadeInDuration > 0 and self.sustain) then
+			if (currentFadeTime < 1) then
+				currentFadeTime = currentFadeTime + (dt / self.fadeInDuration)
+			elseif (self.fadeOutDuration > 0) then
+				self.sustain = false
+			end
+		end
+		
+		if (not self.sustain) then
+			currentFadeTime = currentFadeTime - (dt / self.fadeOutDuration)
+		end
+		
+		if (self.sustain) then
+			self.tick = _tick + (dt * self.Roughness * self.roughMod)
+		else
+			self.tick = _tick + (dt * self.Roughness * self.roughMod * currentFadeTime)
+		end
+		
+		self.currentFadeTime = currentFadeTime
+		
+		return offset * self.Magnitude * self.magnMod * currentFadeTime
+		
+	end
+
+
+	function CameraShakeInstance:StartFadeOut(fadeOutTime)
+		if (fadeOutTime == 0) then
+			self.currentFadeTime = 0
+		end
+		self.fadeOutDuration = fadeOutTime
+		self.fadeInDuration = 0
+		self.sustain = false
+	end
+
+
+	function CameraShakeInstance:StartFadeIn(fadeInTime)
+		if (fadeInTime == 0) then
+			self.currentFadeTime = 1
+		end
+		self.fadeInDuration = fadeInTime or self.fadeInDuration
+		self.fadeOutDuration = 0
+		self.sustain = true
+	end
+
+
+	function CameraShakeInstance:GetScaleRoughness()
+		return self.roughMod
+	end
+
+
+	function CameraShakeInstance:SetScaleRoughness(v)
+		self.roughMod = v
+	end
+
+
+	function CameraShakeInstance:GetScaleMagnitude()
+		return self.magnMod
+	end
+
+
+	function CameraShakeInstance:SetScaleMagnitude(v)
+		self.magnMod = v
+	end
+
+
+	function CameraShakeInstance:GetNormalizedFadeTime()
+		return self.currentFadeTime
+	end
+
+
+	function CameraShakeInstance:IsShaking()
+		return (self.currentFadeTime > 0 or self.sustain)
+	end
+
+
+	function CameraShakeInstance:IsFadingOut()
+		return ((not self.sustain) and self.currentFadeTime > 0)
+	end
+
+
+	function CameraShakeInstance:IsFadingIn()
+		return (self.currentFadeTime < 1 and self.sustain and self.fadeInDuration > 0)
+	end
+
+
+	function CameraShakeInstance:GetState()
+		if (self:IsFadingIn()) then
+			return CameraShakeInstance.CameraShakeState.FadingIn
+		elseif (self:IsFadingOut()) then
+			return CameraShakeInstance.CameraShakeState.FadingOut
+		elseif (self:IsShaking()) then
+			return CameraShakeInstance.CameraShakeState.Sustained
+		else
+			return CameraShakeInstance.CameraShakeState.Inactive
+		end
+	end
+
+	CameraShakePresets = {
+		
+		
+		-- A high-magnitude, short, yet smooth shake.
+		-- Should happen once.
+		OldBump = function()
+			local c = CameraShakeInstance.new(2.5, 4, 0.1, 0.75)
+			c.PositionInfluence = Vector3.new(0.15, 0.15, 0.15)
+			c.RotationInfluence = Vector3.new(1, 1, 1)
+			return c
+		end;
+
+		SmallerBump = function()
+			local c = CameraShakeInstance.new(4, 8, 0, .5)
+			c.PositionInfluence = Vector3.new(0.5, 0.5, 0.5)
+			c.RotationInfluence = Vector3.new(4, 2, 2)
+			return c
+		end;
+		
+		Bump = function()
+			local c = CameraShakeInstance.new(1.5, 20, 0.1, 0.75)
+			c.PositionInfluence = Vector3.new(0.15, 0.15, 0.15)
+			c.RotationInfluence = Vector3.new(1, 1, 1)
+			return c
+		end;
+		
+		-- A very rough, yet low magnitude shake.
+		-- Sustained.
+		Vibration = function()
+			local c = CameraShakeInstance.new(0.4, 20, 0.1, 0.75)
+			c.PositionInfluence = Vector3.new(0, 0.15, 0)
+			c.RotationInfluence = Vector3.new(1.25, 0, 4)
+			return c
+		end;
+		
+		-- A very rough, yet low magnitude shake.
+		-- Sustained.
+		ViolentShake = function()
+			local c = CameraShakeInstance.new(10, 10, 0.1, 0.75)
+			c.PositionInfluence = Vector3.new(0, 0.15, 0)
+			c.RotationInfluence = Vector3.new(1.25, 0, 4)
+			return c
+		end;
+		
+		LongViolentShake = function()
+			local c = CameraShakeInstance.new(10, 10, 0.1, 4)
+			c.PositionInfluence = Vector3.new(0, 0.15, 0)
+			c.RotationInfluence = Vector3.new(1.25, 0, 4)
+			return c
+		end;
+
+		LongViolentShake2 = function()
+			local c = CameraShakeInstance.new(5, 10, 3, 10)
+			c.PositionInfluence = Vector3.new(0.45, 0.45, 0.45)
+			c.RotationInfluence = Vector3.new(4.5, 1.5, 1.5)
+			return c
+		end;
+		
+		-- An intense and rough shake.
+		-- Should happen once.
+		Explosion = function()
+			local c = CameraShakeInstance.new(5, 10, 0, 1.5)
+			c.PositionInfluence = Vector3.new(0.25, 0.25, 0.25)
+			c.RotationInfluence = Vector3.new(4, 1, 1)
+			return c
+		end;
+		
+		Explosion2 = function()
+			local c = CameraShakeInstance.new(4, 7, 0, 1)
+			c.PositionInfluence = Vector3.new(0.5, 0.5, 0.5)
+			c.RotationInfluence = Vector3.new(4, 1, 1)
+			return c
+		end;
+		
+		IntenseExplosion = function()
+			local c = CameraShakeInstance.new(10, 15, 0, 1)
+			c.PositionInfluence = Vector3.new(0.45, 0.45, 0.45)
+			c.RotationInfluence = Vector3.new(4.5, 1.5, 1.5)
+			return c
+		end;
+
+		LongerExplosion = function()
+			local c = CameraShakeInstance.new(10, 15, 0, 2.7)
+			c.PositionInfluence = Vector3.new(0.45, 0.45, 0.45)
+			c.RotationInfluence = Vector3.new(4.5, 1.5, 1.5)
+			return c
+		end;
+		
+		LongerExplosion3 = function()
+			local c = CameraShakeInstance.new(10, 15, 0, 4)
+			c.PositionInfluence = Vector3.new(0.45, 0.45, 0.45)
+			c.RotationInfluence = Vector3.new(4.5, 1.5, 1.5)
+			return c
+		end;
+
+		LongerExplosion2 = function()
+			local c = CameraShakeInstance.new(10, 15, 0, 2)
+			c.PositionInfluence = Vector3.new(0.45, 0.45, 0.45)
+			c.RotationInfluence = Vector3.new(4.5, 1.5, 1.5)
+			return c
+		end;
+		
+		
+		-- A continuous, rough shake
+		-- Sustained.
+		Earthquake = function()
+			local c = CameraShakeInstance.new(0.6, 3.5, 2, 10)
+			c.PositionInfluence = Vector3.new(0.25, 0.25, 0.25)
+			c.RotationInfluence = Vector3.new(1, 1, 4)
+			return c
+		end;
+		
+		
+		-- A bizarre shake with a very high magnitude and low roughness.
+		-- Sustained.
+		BadTrip = function()
+			local c = CameraShakeInstance.new(10, 0.15, 5, 10)
+			c.PositionInfluence = Vector3.new(0, 0, 0.15)
+			c.RotationInfluence = Vector3.new(2, 1, 4)
+			return c
+		end;
+		
+		
+		-- A subtle, slow shake.
+		-- Sustained.
+		HandheldCamera = function()
+			local c = CameraShakeInstance.new(1, 0.25, 5, 0.75) -- 0.75 was previously 10
+			c.PositionInfluence = Vector3.new(0, 0, 0)
+			c.RotationInfluence = Vector3.new(1, 0.5, 0.5)
+			return c
+		end;
+		
+		-- A slightly rough, medium magnitude shake.
+		-- Sustained.
+		RoughDriving = function()
+			local c = CameraShakeInstance.new(1, 2, 1, 1)
+			c.PositionInfluence = Vector3.new(0, 0, 0)
+			c.RotationInfluence = Vector3.new(1, 1, 1)
+			return c
+		end;
+		
+		
+	}
+
+	local OCSP = CameraShakePresets
+
+	CameraShakePresets = setmetatable({}, {
+		__index = function(t, i)
+			local f = OCSP[i]
+			if (type(f) == "function") then
+				return f()
+			end
+			error("No preset found with index \"" .. i .. "\"")
+		end;
+	})
+
+	CameraShaker = {}
+	CameraShaker.__index = CameraShaker
+
+	local V3 = Vector3.new
+	local CF = CFrame.new
+	local ANG = CFrame.Angles
+	local RAD = math.rad
+	local v3Zero = V3()
+
+	local CameraShakeState = CameraShakeInstance.CameraShakeState
+
+	local defaultPosInfluence = V3(0.15, 0.15, 0.15)
+	local defaultRotInfluence = V3(1, 1, 1)
+
+
+	CameraShaker.CameraShakeInstance = CameraShakeInstance
+	CameraShaker.Presets = CameraShakePresets
+
+
+	function CameraShaker.new(renderPriority, callback)
+		assert(type(renderPriority) == "number", "RenderPriority must be a number (e.g.: Enum.RenderPriority.Camera.Value)")
+		assert(type(callback) == "function", "Callback must be a function")
+		
+		local self = setmetatable({
+			_running = false;
+			_renderName = "CameraShaker";
+			_renderPriority = renderPriority;
+			_posAddShake = v3Zero;
+			_rotAddShake = v3Zero;
+			_camShakeInstances = {};
+			_removeInstances = {};
+			_callback = callback;
+		}, CameraShaker)
+		
+		return self
+		
+	end
+
+
+	function CameraShaker:Start()
+		if (self._running) then return end
+		self._running = true
+		local callback = self._callback
+		game:GetService("RunService"):BindToRenderStep(self._renderName, self._renderPriority, function(dt)
+			local cf = self:Update(dt)
+			callback(cf)
+		end)
+	end
+
+
+	function CameraShaker:Stop()
+		if (not self._running) then return end
+		game:GetService("RunService"):UnbindFromRenderStep(self._renderName)
+		self._running = false
+	end
+
+
+	function CameraShaker:StopSustained(duration)
+		for _,c in pairs(self._camShakeInstances) do
+			if (c.fadeOutDuration == 0) then
+				c:StartFadeOut(duration or c.fadeInDuration)
+			end
+		end
+	end
+
+
+	function CameraShaker:Update(dt)
+		
+		local posAddShake = v3Zero
+		local rotAddShake = v3Zero
+		
+		local instances = self._camShakeInstances
+		
+		-- Update all instances:
+		for i = 1,#instances do
+			
+			local c = instances[i]
+			local state = c:GetState()
+			
+			if (state == CameraShakeState.Inactive and c.DeleteOnInactive) then
+				self._removeInstances[#self._removeInstances + 1] = i
+			elseif (state ~= CameraShakeState.Inactive) then
+				local shake = c:UpdateShake(dt)
+				posAddShake = posAddShake + (shake * c.PositionInfluence)
+				rotAddShake = rotAddShake + (shake * c.RotationInfluence)
+			end
+			
+		end
+		
+		
+		-- Remove dead instances:
+		for i = #self._removeInstances,1,-1 do
+			local instIndex = self._removeInstances[i]
+			table.remove(instances, instIndex)
+			self._removeInstances[i] = nil
+		end
+		
+		return CF(posAddShake) *
+				ANG(0, RAD(rotAddShake.Y), 0) *
+				ANG(RAD(rotAddShake.X), 0, RAD(rotAddShake.Z))
+		
+	end
+
+
+	function CameraShaker:Shake(shakeInstance)
+		assert(type(shakeInstance) == "table" and shakeInstance._camShakeInstance, "ShakeInstance must be of type CameraShakeInstance")
+		self._camShakeInstances[#self._camShakeInstances + 1] = shakeInstance
+		return shakeInstance
+	end
+
+
+	function CameraShaker:ShakeSustain(shakeInstance)
+		assert(type(shakeInstance) == "table" and shakeInstance._camShakeInstance, "ShakeInstance must be of type CameraShakeInstance")
+		self._camShakeInstances[#self._camShakeInstances + 1] = shakeInstance
+		shakeInstance:StartFadeIn(shakeInstance.fadeInDuration)
+		return shakeInstance
+	end
+
+
+	function CameraShaker:ShakeOnce(magnitude, roughness, fadeInTime, fadeOutTime, posInfluence, rotInfluence)
+		local shakeInstance = CameraShakeInstance.new(magnitude, roughness, fadeInTime, fadeOutTime)
+		shakeInstance.PositionInfluence = (typeof(posInfluence) == "Vector3" and posInfluence or defaultPosInfluence)
+		shakeInstance.RotationInfluence = (typeof(rotInfluence) == "Vector3" and rotInfluence or defaultRotInfluence)
+		self._camShakeInstances[#self._camShakeInstances + 1] = shakeInstance
+		return shakeInstance
+	end
+
+
+	function CameraShaker:StartShake(magnitude, roughness, fadeInTime, posInfluence, rotInfluence)
+		local shakeInstance = CameraShakeInstance.new(magnitude, roughness, fadeInTime)
+		shakeInstance.PositionInfluence = (typeof(posInfluence) == "Vector3" and posInfluence or defaultPosInfluence)
+		shakeInstance.RotationInfluence = (typeof(rotInfluence) == "Vector3" and rotInfluence or defaultRotInfluence)
+		shakeInstance:StartFadeIn(fadeInTime)
+		self._camShakeInstances[#self._camShakeInstances + 1] = shakeInstance
+		return shakeInstance
+	end
+end
+
+local keybinds = {
+	p = "Pose",
+	n = "Taunt",
+	q = "Summon",
+	e = "EMoves",
+	r = "RMoves",
+	t = "TMoves",
+	y = "YMoves",
+	g = "GMoves",
+	h = "GutGouge",
+	j = "LoveTrain",
+	l = "NoCooldowns"
+}
+
+local function findhum(p)
+	if p:FindFirstAncestorOfClass("Model") then
+		return p:FindFirstAncestorOfClass("Model"):FindFirstChildWhichIsA("Humanoid", true)
+	end
+end
+
+function rf.OnClientInvoke(pt, cf, size, bl, type)
+	if pt == true then
+		return m.Hit.Position
+	end
+
+	local params = OverlapParams.new()
+	params.FilterDescendantsInstances = {owner.Character, script, bl}
+	params.FilterType = Enum.RaycastFilterType.Exclude
+
+	if debug then
+		local p = Instance.new("Part", script)
+		p.Size = size
+		p.Anchored = true
+		p.CanCollide = false
+		p.CFrame = pt.CFrame * cf
+		p.Material = "ForceField"
+		p.Color = Color3.new(1, 0, 0)
+
+		if type == "Magnitude" then
+			p.Shape = "Ball"
+		end
+
+		coroutine.wrap(function()
+			task.wait(.5)
+			p:Destroy()
+		end)()
+	end
+
+	local victims = {}
+	local tbl
+	
+	if type == "Magnitude" then
+		tbl = workspace:GetPartBoundsInRadius(pt.CFrame.Position, size.X, params)
+	else
+		tbl = workspace:GetPartBoundsInBox(pt.CFrame * cf, size, params)
+	end
+
+	for _, hit in pairs(tbl) do
+		local hum = findhum(hit)
+
+		if hum and hum.Health > 0 and not hum:GetAttribute("Ragdolled") then
+			if not table.find(victims, hit:FindFirstAncestorOfClass("Model")) then
+				table.insert(victims, hit:FindFirstAncestorOfClass("Model"))
+			end
+		end
+	end
+
+	return victims
+end
+
+m.Button1Down:Connect(function()
+	re:FireServer({Action = "M1"})
+end)
+
+re.OnClientEvent:Connect(function(what, i, s, t, l)
+	if what == "Bloom" then
+		local bloom = Instance.new("BloomEffect", game:GetService("Lighting"))
+		bloom.Name = "LoveTrainBloom"
+	
+		local prev = bloom:Clone()
+
+		game:GetService("TweenService"):Create(bloom, TweenInfo.new(.5, Enum.EasingStyle.Back), {Intensity = i, Size = s, Threshold = t}):Play()
+		task.wait(l or t)
+		
+		game:GetService("TweenService"):Create(bloom, TweenInfo.new(.25),{Intensity = prev.Intensity,Size = prev.Size,Threshold = prev.Threshold}):Play()
+		prev:Destroy()
+		
+		game:GetService("Debris"):AddItem(bloom, .6)
+	elseif what == "CameraShake" then
+		local shake = CameraShaker.new(Enum.RenderPriority.Camera.Value, function(scf)
+			workspace.CurrentCamera.CFrame = workspace.CurrentCamera.CFrame * scf
+		end)
+
+	shake:Start()
+		shake:Shake(CameraShaker.Presets.ViolentShake)
+	end
+end)
+
+m.KeyDown:Connect(function(k)
+	if keybinds[k] then
+		local timeout = false
+		local start = os.clock()
+
+		repeat
+			task.wait()
+			timeout = (os.clock() - start) >= .3
+		until not uis:IsKeyDown(Enum.KeyCode[string.upper(k)]) or timeout
+		
+		re:FireServer({Action = keybinds[k], Held = timeout})
+	end
+end)
+]], re)
+
+
+local printf = (printf or print)
+
+printf([[
+<font size="24"><b>d4c lt script by mech</b></font>
+<font size="18"><b>-- // controls \\ --</b></font>
+q - summon/unsummon
+m1 - rush attack
+g - fanfire disposal
+g+ - precision disposal
+j - love train
+p - pose
+n - taunt
+
+<font color="#64E080"><b>stand ON</b></font> 
+e - body carving
+r - spilling of blood
+r+ - severing chokeslam
+t - presidential leverage
+y - state funeral
+h - gut gouge
+
+<font color="#EE4B2B"><b>stand OFF</b></font>
+e - hand of fortune
+r - throat incision
+t - head bomb (targets nearest)
+y - chop strike
+
+the <b>+</b> symbol at the end of a key means you have to hold it
+while in <font color="#FFD700"><b>love train</b></font>, you can only m1 or use presidential leverage]])
