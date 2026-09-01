@@ -1,0 +1,2293 @@
+-- porte dby Cerztop
+-- unloggable mahoraga >:D
+script.Parent = workspace
+local tw = game:GetService("TweenService")
+local gs = game:GetService("GeometryService")
+
+local assets = game:GetService("ReplicatedStorage"):FindFirstChild("MahoragaAssets")
+
+if not assets then
+	assets = require(88267146241001):Clone()
+	assets.Name = "MahoragaAssets"
+	assets.Parent = game:GetService("ReplicatedStorage")
+end
+
+local AnimationTrack = require(assets:WaitForChild("AnimationTrack"))
+
+local char = owner.Character
+local hum = char.Humanoid
+hum.AutoRotate = false
+hum.RootPart.Anchored = true
+
+local function load(i)
+	local cache = _G.animation_cache
+
+	if not cache then
+		cache = {}
+		_G.animation_cache = cache
+	end
+
+	if not cache[i] then
+		cache[i] = require(i)
+	end
+
+	return cache[i]
+end
+
+local ps = game:GetService("PhysicsService")
+
+if not ps:IsCollisionGroupRegistered("Players") then
+	ps:RegisterCollisionGroup("Players")
+end
+
+if not ps:IsCollisionGroupRegistered("Colliders") then
+	ps:RegisterCollisionGroup("Colliders")
+end
+
+ps:CollisionGroupSetCollidable("Players", "Colliders", false)
+ps:CollisionGroupSetCollidable("Colliders", "Colliders", true)
+
+local function ragdoll(c, t)
+	local hum = c:FindFirstChildOfClass("Humanoid")
+
+	local cs = Instance.new("Folder")
+	cs.Name = "ColliderFolder"
+	cs.Parent = c
+
+	hum.PlatformStand = true
+
+	for _,v in pairs(c:GetDescendants()) do
+		if v:IsA("Motor6D") or v:IsA("Motor") then
+			local bcs = Instance.new("BallSocketConstraint")
+			bcs.Name = "RagdollSocket"
+			bcs.Parent = v.Part0
+
+			v.Part1.CanCollide = false
+			v.Part0.CanCollide = false
+			v.Part1.CollisionGroup = "Players"
+
+			local fake = Instance.new("Part")
+			fake.Massless = true
+			fake.Transparency = 1
+			fake.Name = v.Part1.Name
+			fake.Size = v.Part1.Size / 1.1
+			fake.CollisionGroup = "Colliders"
+			-- // fake.Shape = Enum.PartType.Ball
+
+			fake.Parent = cs
+
+			local w = Instance.new("Weld")
+			w.Part0 = v.Part1
+			w.Part1 = fake
+			w.Parent = fake
+
+			local a0 = Instance.new("Attachment")
+			a0.Name = "RagdollAttachment"
+			a0.Parent = v.Part0
+
+			local a1 = Instance.new("Attachment")
+			a1.Name = "RagdollAttachment"
+			a1.Parent = v.Part1
+
+			a1.Position = v.C1.Position
+			a0.WorldPosition = a1.WorldPosition
+
+			bcs.LimitsEnabled = true
+
+			bcs.Attachment0 = a0
+			bcs.Attachment1 = a1
+
+			if v.C0.Position == v.C1.Position then
+				v.Enabled = true
+			else
+				v.Enabled = false
+			end
+
+			coroutine.wrap(function()
+				if t ~= nil and tonumber(t) ~= nil then
+					task.wait(t)
+					hum.PlatformStand = false
+
+					fake:Destroy()
+					v.Enabled = true
+				end
+			end)()
+		end
+	end
+end
+
+local raga = assets.Mahoraga:Clone()
+
+char.Parent = nil
+owner.Character = raga
+char.Parent = script
+
+raga.Parent = script
+raga.Humanoid.HipHeight = 8.4
+raga.Humanoid.JumpHeight = 75
+raga.Humanoid.AutoRotate = false
+raga.HumanoidRootPart.Anchored = true
+raga.HumanoidRootPart.Massless = false
+raga.HumanoidRootPart.CFrame = CFrame.new(10e4, 10e4, 10e4)
+
+-- // animation stuff
+
+local anims = {
+	Run = {0, true},
+	Walk = {0, true},
+	Idle = {2, true},
+	Fall = {0, true},
+	Jump = {0, false},
+	LMB1 = {4, false},
+	LMB2 = {4, false},
+	LMB3 = {4, false},
+	LMB4 = {4, false},
+	DivineHook = {4, false},
+	TerrainToss = {4, false},
+	DivineAirblast = {4, false},
+	WorldCuttingSlash = {4, false}
+}
+
+for i, v in pairs(anims) do
+	local module = load(assets.Animations:FindFirstChild(i))
+
+	local anim = AnimationTrack.new()
+	anim.Name = i
+	anim.Looped = v[2]
+	anim:AdjustWeight(v[1])
+
+	anim:setAnimation(module)
+	anim:setRig(raga)
+
+	anims[i] = anim
+end
+
+-- // sound stuff
+
+local sounds = {
+	Summon = {3, 4.833, 23.405},
+
+	LMB1SFX = {1, 34.371, 35.111},
+	LMB2SFX = {1, 35.789, 37.471},
+	LMB3SFX = {1, 38.061, 39.623},
+	LMB4SFX = {1, 40.333, 41.054},
+
+	LMB1HFX = {2, 41.578, 42.615},
+	LMB2HFX = {2, 43.141, 43.893},
+	LMB3HFX = {2, 44.439, 45.903},
+	-- // LMB4HFX = {2, 43.141, 43.893},
+	LMB4HFX = {2, 41.578, 42.615},
+
+	DivineAirblast = {2, 47.843, 52.104},
+
+	TerrainToss = {2, 52.888, 54.547},
+	TerrainTossHit = {2, 55.291, 57.229},
+
+	DivineHookHit = {2, 62.444, 64.323},
+	DivineHookStart = {2, 58.087, 61.449},
+
+	WorldSlash = {2, 65.192, 67.141},
+	WorldSlashHit = {2, 67.666, 70.621},
+
+	Footstep1 = {.7, 27.861, 28.811},
+	Footstep2 = {.7, 29.182, 29.947},
+	Footstep3 = {.7, 30.318, 31.224},
+	Footstep4 = {.7, 31.628, 32.382},
+	Footstep5 = {.7, 32.829, 33.747},
+}
+
+local preload = {}
+
+local base = Instance.new("Sound")
+base.PlaybackRegionsEnabled = true
+base.SoundId = "rbxassetid://18665995774"
+table.insert(preload, base)
+
+for i, v in pairs(sounds) do
+	local snd = base:Clone()
+	snd.Name = i
+	snd.Volume = v[1]
+	snd.RollOffMaxDistance = 300
+	snd.PlaybackRegionsEnabled = true
+	snd.PlaybackRegion = NumberRange.new(v[2], v[3])
+	table.insert(preload, snd)
+
+	sounds[i] = snd
+end
+
+local function play(what, p, scf)
+	if sounds[what] then
+		local snd = sounds[what]:Clone()
+		snd.Name = what
+		snd.Parent = p or raga.HumanoidRootPart
+
+		local pt
+
+		if scf ~= nil then
+			pt = Instance.new("Part")
+			pt.CanCollide = false
+			pt.Size = Vector3.one
+			pt.Transparency = 1
+			pt.CanQuery = false
+			pt.CanTouch = false
+			pt.Anchored = true
+			pt.CFrame = scf
+
+			pt.Parent = script
+			snd.Parent = pt
+		end
+
+		snd:Play()
+
+		snd.Ended:Once(function()
+			task.wait(.1)
+			snd:Destroy()
+
+			if pt then
+				pt:Destroy()
+			end
+		end)
+
+		return snd
+	end
+end
+
+local bone = raga:FindFirstChild("Bone.028", true)
+local old = bone.CFrame
+bone.CFrame += Vector3.yAxis * 100
+
+local summ = assets.Effects.Summon
+local cf = hum.RootPart.CFrame * CFrame.new(-.5, 3, 13.25)
+
+local cocoon = summ.Cocoon:Clone()
+cocoon:ScaleTo(1.56)
+cocoon.Parent = script
+cocoon:PivotTo(cf - Vector3.yAxis * 30)
+
+local suser = AnimationTrack.new()
+suser:setAnimation(load(assets.Animations.SummonUser))
+suser.lerpFactor = 1
+suser:setRig(char)
+suser.Stall = 3
+
+local sraga = AnimationTrack.new()
+sraga:setAnimation(load(assets.Animations.SummonRaga))
+sraga:AdjustWeight(10)
+sraga.lerpFactor = 1
+sraga:setRig(raga)
+task.wait(.5)
+
+task.spawn(function()
+	for _, plr in pairs(game:GetService("Players"):GetPlayers()) do
+		if plr and plr ~= owner and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") and (plr.Character.HumanoidRootPart.Position - hum.RootPart.Position).Magnitude <= 96 then
+			task.spawn(function()
+				local ls = assets.Scripts.SummonScript:Clone()
+				ls.Parent = plr.PlayerGui
+				ls:FindFirstChild("CFrame").Value = hum.RootPart.CFrame
+				ls.Enabled = true
+				task.delay(20, ls.Destroy, ls)
+			end)
+		end
+	end
+end)
+
+task.spawn(function()
+	local ls = assets.Scripts.SummonScript:Clone()
+	ls.Parent = owner.PlayerGui
+	ls:FindFirstChild("CFrame").Value = hum.RootPart.CFrame
+	ls.Enabled = true
+	task.delay(20, ls.Destroy, ls)
+
+	local ls = assets.Scripts.CameraScript:Clone()
+	ls:WaitForChild("Origin").Value = hum.RootPart.CFrame - Vector3.yAxis * 3
+	ls.Parent = owner.PlayerGui
+	ls.Enabled = true
+	task.delay(20, ls.Destroy, ls)
+end)
+
+suser:Play()
+sraga:Play()
+
+anims.Walk:Play()
+anims.Idle:Play()
+anims.Fall:Play()
+
+anims.Walk.lerpFactor = .3
+anims.Fall.lerpFactor = .3
+anims.Idle.lerpFactor = .3
+
+local snd = play("Summon", nil, hum.RootPart.CFrame)
+local warning = Instance.new("Sound")
+warning.Parent = workspace
+warning.SoundId = "rbxassetid://9125889335"
+warning.Volume = 3
+warning:Play()
+
+local a0 = Instance.new("Attachment")
+a0.Parent = cocoon.Part
+a0.WorldCFrame = cocoon:FindFirstChild("2").CFrame * CFrame.new(2, 0, 0)
+
+local fx = summ.WarmUp.ParticleEmitter:Clone()
+fx.Parent = a0
+fx.LockedToPart = false
+
+task.spawn(function()
+	fx.Enabled = true
+
+	while fx.Enabled do
+		task.wait(1 / fx.Rate)
+		fx:Emit(1)
+	end
+end)
+
+task.delay(1.5, function()
+	local lines = summ.Lines:Clone()
+	lines.Parent = script
+	lines.CFrame = hum.RootPart.CFrame - Vector3.yAxis * 2.9
+	local warning = Instance.new("Sound")
+	warning.Parent = hum.RootPart
+	warning.SoundId = "rbxassetid://429459101"
+	warning.Volume = 3
+	warning:Play()
+	local sigma = Instance.new("Sound")
+	sigma.Parent = hum.RootPart
+	sigma.SoundId = "rbxassetid://4299623070"
+	sigma.Volume = 3
+	sigma:Play()
+
+	local thing = Instance.new("Sound")
+	thing.Parent = hum.RootPart
+	thing.SoundId = "rbxassetid://3929475610"
+	thing.Volume = 3
+	thing:Play()
+
+	for _, v in pairs(lines:GetChildren()) do
+		task.spawn(function()
+			while v.Enabled do
+				task.wait(1 / v.Rate)
+				v:Emit(1)
+			end
+		end)
+	end
+	local s1 = Instance.new("Sound")
+	s1.Parent = hum.RootPart
+	s1.SoundId = "rbxassetid://8160241326"
+	s1.Volume = 3
+	s1:Play()
+	local s2 = Instance.new("Sound")
+	s2.Parent = hum.RootPart
+	s2.SoundId = "rbxassetid://8232976983"
+	s2.Volume = 3
+	s2:Play()
+
+	task.wait(1.5)
+
+	local r = 24
+	local hc = math.pi
+	local animals = {}
+
+	local a = math.pi / 2
+
+	local p = summ.Frog:Clone()
+	p.Parent = script
+	p.Anchored = true
+	p.Transparency = 1
+	p.CFrame = hum.RootPart.CFrame * CFrame.new(math.cos(a) * r, 0, math.sin(a) * r)
+	p.CFrame = CFrame.new(p.Position, hum.RootPart.Position) * CFrame.Angles(0, math.pi / 2, 0)
+	p.Position -= Vector3.yAxis
+	table.insert(animals, p)
+	local THO = Instance.new("Sound")
+	THO.Parent = hum.RootPart
+	THO.SoundId = "rbxassetid://4299625271"
+	THO.Volume = 3
+	THO:Play()
+
+	tw:Create(p, TweenInfo.new(.5), {Transparency = 0}):Play()
+
+	task.spawn(function()
+		for i = 1, 8 do
+			for j = -1, 1, 2 do
+				local a = (i * j) * (hc / 8)
+				a += math.pi / 2
+
+				local which = (i % 2 == 0 and summ.Frog or summ.WhiteWolf)
+
+				local p = which:Clone()
+				p.Parent = script
+				p.Anchored = true
+				p.Transparency = 1
+				p.CFrame = hum.RootPart.CFrame * CFrame.new(math.cos(a) * r, 0, math.sin(a) * r)
+				p.CFrame = CFrame.new(p.Position, hum.RootPart.Position) * CFrame.Angles(0, math.pi / 2, 0)
+				table.insert(animals, p)
+
+				if p.Name == "Frog" then
+					p.Position -= Vector3.yAxis
+				end
+
+				tw:Create(p, TweenInfo.new(.5), {Transparency = 0}):Play()
+			end
+
+			if i == 2 then
+				repeat
+					task.wait()
+				until snd.TimePosition >= 8.2
+			elseif i == 4 then
+				repeat
+					task.wait()
+				until snd.TimePosition >= 8.4
+			elseif i == 6 then
+				repeat
+					task.wait()
+				until snd.TimePosition >= 8.75
+			end
+		end
+	end)
+	task.wait(4)
+
+	for _, v in pairs(lines:GetChildren()) do
+		v.Enabled = false
+	end
+
+	task.wait(1)
+	lines:Destroy()
+
+	task.wait(3)
+	local idklol = Instance.new("Sound")
+	idklol.Parent = hum.RootPart
+	idklol.SoundId = "rbxassetid://4299625271"
+	idklol.Volume = 3
+	idklol:Play()
+	for _, v in pairs(animals) do
+		tw:Create(v, TweenInfo.new(3), {Transparency = 1}):Play()
+		task.delay(3, v.Destroy, v)
+	end
+end)
+
+suser:GetMarkerReachedSignal("Ragdoll"):Once(function()
+	local fx = summ.Smack:Clone()
+	fx.Parent = script
+	fx.CFrame = hum.RootPart.CFrame * CFrame.new(-2, 0, 0) * CFrame.Angles(math.pi / 2, 0, math.pi / 2)
+	task.delay(3, fx.Destroy, fx)
+
+	for _, v in pairs(fx:GetDescendants()) do
+		if v:IsA("ParticleEmitter") then
+			v:Emit(v:GetAttribute("EmitCount") * 2)
+		end
+	end
+
+	hum.RootPart.Anchored = false
+	hum.RootPart.CFrame = hum.Torso.CFrame
+
+	char.Parent = nil
+	char.Parent = workspace
+
+	hum.Health = 0
+	char.Health:Destroy()
+	hum.BreakJointsOnDeath = false
+
+	for _, v in pairs(char:GetDescendants()) do
+		if v.Name == "AWeld" then
+			v.Enabled = false
+			v.Parent.C0 = v.C0
+		end
+	end
+
+	ragdoll(char)
+	local begone = Instance.new("Sound")
+	begone.Parent = char
+	begone.SoundId = "rbxassetid://7555706416"
+	begone.Volume = 3
+	begone:Play()
+	task.wait()
+	local begone2 = Instance.new("Sound")
+	begone2.Parent = char
+	begone2.SoundId = "rbxassetid://4086190876"
+	begone2.Volume = 3
+	begone2:Play()
+	local bv = Instance.new("BodyVelocity")
+	bv.MaxForce = Vector3.one * 10e7
+	bv.Velocity = hum.RootPart.CFrame.RightVector * -125
+	bv.Parent = hum.RootPart
+	task.delay(.2, bv.Destroy, bv)
+end)
+
+task.wait(5)
+
+local s = tick()
+
+repeat
+	task.wait()
+	cocoon:PivotTo((cf - Vector3.yAxis * 30):Lerp(cf, tw:GetValue((tick() - s) / 3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)))
+until (tick() - s) >= 3
+
+raga.HumanoidRootPart.CFrame = hum.RootPart.CFrame * CFrame.new(0, 7.5, 2.5)
+
+local times = {
+	9.75, 10.3, 10.3,
+	10.76, 12.75, 13,
+	13.1, 13.2, 13.3,
+	13.4, 13.5, 13.6,
+	13.7, 13.8
+}
+
+for i, v in pairs(times) do
+	repeat
+		task.wait()
+
+		if i == 1 then
+			bone.CFrame = old + Vector3.yAxis * 100
+		end
+	until sraga.TimePosition >= v
+
+	if i == 1 then
+		fx.Enabled = false
+	end
+
+	cocoon:FindFirstChild(tostring(i)):Destroy()
+end
+
+sraga.Stopped:Wait()
+cocoon:Destroy()
+
+local fsi = 1
+local dbg = false
+local no_cd = false
+local mhit = Vector3.zero
+local cool_guy = (owner.UserId == 327822505 or owner.UserId == 3534268048)
+--[[local theme = Instance.new("Sound",workspace)
+theme.SoundId = "rbxassetid://1837853076"
+theme.Volume = 1
+theme.Looped = true
+theme:Play()]]
+
+local hum: Humanoid = raga.Humanoid
+hum.WalkSpeed = 18
+hum.AutoRotate = true
+hum.UseJumpPower = false
+hum.PlatformStand = false
+hum.RootPart.Anchored = false
+raga:SetAttribute("OWS", hum.WalkSpeed)
+raga:SetAttribute("OJH", hum.JumpHeight)
+
+local re = Instance.new("RemoteEvent")
+re.Name = "MahoragaEvent"
+re.Parent = raga
+
+local ure = Instance.new("UnreliableRemoteEvent")
+ure.Name = "KeyStuffs"
+ure.Parent = re
+
+-- // tables
+
+local dbs = {}
+local downs = {}
+local stuns = {}
+local buttons = {}
+
+local order = {
+	"RushAttack",
+	"DivineAirblast",
+	"TerrainToss",
+	"DivineHook",
+	"WorldSlash",
+	"ToggleRun"
+}
+
+local moves = {
+	RushAttack = {"m1", "Rush Attack"},
+	DivineAirblast = {"e", "Divine Airblast"},
+	TerrainToss = {"r", "Sila Terrain Toss"},
+	DivineHook = {"t", "Divine Hook"},
+	WorldSlash = {"f", "World Cutting Slash"},
+	ToggleRun = {"z", "Toggle Running"}
+}
+
+if cool_guy then
+	table.insert(order, "NoCooldowns")
+	moves.NoCooldowns = {"l", "No Cooldowns"}
+end
+
+local cds = {
+	RushCount = 1,
+	DivineHook = 5,
+	WorldSlash = 20,
+	RushFinish = 2,
+	RushAttack = .4,
+	TerrainToss = 7,
+	DivineAirblast = 6
+}
+
+local stats = {
+	RushAttack = {
+		Stun = 1.2,
+		Damage = 15,
+		Knockback = {5, .05}
+	},
+
+	RushFinish = {
+		Stun = 1.2,
+		Damage = 24,
+		Sound = "LMB4HFX",
+		HitEffect = "Slash",
+		Knockback = {75, .25}
+	},
+
+	DivineAirblast = {
+		Stun = 2,
+		Damage = 10,
+		Ragdoll = 2,
+		Knockback = {75, .1}
+	},
+
+	DivineHookStart = {
+		Stun = 1.5,
+		Damage = 10,
+		HitEffect = "Blunt",
+		Knockback = {0, 1}
+	},
+
+	DivineHookStop = {
+		Stun = 3,
+		Damage = 25,
+		Ragdoll = 3,
+		HitEffect = "Slash"
+	}
+}
+
+-- // ui stuff
+
+local ui = assets.UI:Clone()
+ui.Parent = owner.PlayerGui
+ui.Main.Info.Label.Text = owner.DisplayName
+ui.Main.Health.Container.Bar.Recovery.Visible = false
+
+local old = ui.Vignette.ImageTransparency
+ui.Vignette.ImageTransparency = 1
+
+tw:Create(ui.Vignette, TweenInfo.new(1), {ImageTransparency = old}):Play()
+
+for _, move in ipairs(order) do
+	local v = moves[move]
+
+	local button = ui.Moves.Assets.Button:Clone()
+	button.Name = v[2]
+	button.Visible = true
+	button.Label.Text = v[2]
+	button.Parent = ui.Moves
+	button.Key.Text = string.upper(v[1])
+	button.Label.TextScaled = not button.Label.TextFits
+	button.Key.TextScaled = (#(v[1]) > 1 and true or false)
+
+	v[3] = button
+	buttons[v[1]] = button
+
+	button.MouseButton1Down:Connect(function()
+		downs[v[1]] = true
+		re:FireClient(owner, "DoMove", move)
+	end)
+
+	button.MouseButton1Up:Connect(function()
+		downs[v[1]] = false
+	end)
+end
+
+-- // functions
+
+local rnd = Random.new()
+
+local function change(ws, jh)
+	hum.WalkSpeed = ws or raga:GetAttribute("OWS")
+	hum.JumpHeight = jh or raga:GetAttribute("OJH")
+end
+
+local function nn(mn, mx, int)
+	if int then
+		return rnd:NextInteger(mn, mx)
+	else
+		return rnd:NextNumber(mn, mx)
+	end
+end
+
+local function findhum(p)
+	local mdl = p:FindFirstAncestorOfClass("Model")
+
+	if mdl then
+		return mdl:FindFirstChildOfClass("Humanoid")
+	end
+end
+
+local function get_hums(pos, rad)
+	local hums = {}
+	local gotten = {}
+
+	for _, v in pairs(workspace:GetPartBoundsInRadius(pos, rad)) do
+		local hum = findhum(v)
+
+		if hum and not gotten[hum] then
+			gotten[hum] = true
+			table.insert(hums, hum:FindFirstAncestorOfClass("Model"))
+		end
+	end
+
+	return hums
+end
+
+local function hb(pt, cf, size, type, bl)
+	local params = OverlapParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = {script, bl}
+
+	if dbg then
+		local p = Instance.new("Part")
+		p.Size = size
+		p.Anchored = true
+		p.CanTouch = false
+		p.CanQuery = false
+		p.CanCollide = false
+		p.CastShadow = false
+		p.CFrame = pt.CFrame * cf
+		p.Color = Color3.new(1, 0, 0)
+		p.Material = Enum.Material.ForceField
+
+		if type == "Magnitude" then
+			p.Shape = "Ball"
+		end
+
+		p.Parent = script
+		task.delay(.5, p.Destroy, p)
+	end
+
+	local victims = {}
+	local ncf = (pt.CFrame * cf)
+	local tbl = workspace:GetPartBoundsInBox(pt.CFrame * cf, size, params)
+
+	for _, hit in pairs(tbl) do
+		if type == "Magnitude" and (hit.Position - ncf.Position).Magnitude > (size.X / 2) then
+			continue
+		end
+
+		local hum = findhum(hit)
+
+		if hum and hum.RootPart and hum.Health > 0 then
+			if not table.find(victims, hit:FindFirstAncestorOfClass("Model")) then
+				table.insert(victims, hit:FindFirstAncestorOfClass("Model"))
+			end
+		end
+	end
+
+	table.sort(victims, function(a, b)
+		return (hum.RootPart.Position - a.HumanoidRootPart.Position).Magnitude < (hum.RootPart.Position - b.HumanoidRootPart.Position).Magnitude
+	end)
+
+	return victims
+end
+
+local function stun(hum, t)
+	if not t or t <= 0 then
+		return
+	end
+
+	coroutine.wrap(function()
+		local data = stuns[hum]
+
+		if data then
+			if data[3] > t and (tick() + t) - (data[3] + data[4]) < 0 then
+				return
+			else
+				data[1]:Disconnect()
+				task.cancel(data[2])
+			end
+		end
+
+		local mdl = hum:FindFirstAncestorOfClass("Model")
+
+		local ows = hum:GetAttribute("OWS") or hum.WalkSpeed
+		hum:SetAttribute("OWS", ows)
+		hum.WalkSpeed = .5
+
+		mdl:SetAttribute("Stunned", true)
+
+		coroutine.wrap(function()
+			local cnt = mdl.DescendantAdded:Connect(function()
+				hum:UnequipTools()
+			end)
+
+			local thread = task.delay(t, function()
+				mdl:SetAttribute("Stunned", false)
+
+				hum.WalkSpeed = ows
+				stuns[hum][1]:Disconnect()
+			end)
+
+			stuns[hum] = {cnt, thread, t, tick()}
+		end)()
+	end)()
+end
+
+local function rocky(args)
+	assert(args.Origin, "No origin data.")
+
+	local orig = args.Origin
+	local amt = args.Amount or 30
+	local life = args.Lifetime or 3
+	local radius = args.Radius or 20
+	local delay = args.DelayAmount or .05
+	local size = args.Size or Vector3.one * 2
+
+	local a, b = 30, 360 / amt
+
+	if typeof(orig) == "Instance" then
+		orig = orig.CFrame
+	end
+
+	orig *= (args.Offset or CFrame.new())
+
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = {script, args.Exclude}
+
+	local rocks = Instance.new("Model")
+	rocks.Name = "Rocks"
+	rocks.Parent = script
+
+	if args.AttachTo then
+		args.BypassDuration = true
+
+		args.AttachTo.Destroying:Connect(function()
+			rocks:Destroy()
+		end)
+	end
+
+	if not args.BypassDuration then
+		task.delay(life + delay * amt + .5, rocks.Destroy, rocks)
+	end
+
+	for _ = 1, amt do
+		local r1 = workspace:Raycast(
+			(orig * CFrame.Angles(0, math.rad(a), 0) * CFrame.new(radius / 2 + radius / 2.7, 10, 0)).Position,
+			Vector3.yAxis * -20,
+			params
+		)
+
+		local r2 = workspace:Raycast(
+			(orig * CFrame.Angles(0, math.rad(a), 0) * CFrame.new(radius / 2 + radius / 10, 10, 0)).Position,
+			Vector3.yAxis * -20,
+			params
+		)
+
+		if r1 and r2 then
+			local rock = Instance.new("Part")
+			rock.Anchored = true
+			rock.CanCollide = false
+			rock.CanQuery = false
+			rock.CanTouch = false
+			rock.Material = r1.Material
+			rock.Color = r1.Instance.Color
+			rock.TopSurface = Enum.SurfaceType.Smooth
+			rock.BottomSurface = Enum.SurfaceType.Smooth
+
+			rock.Size = Vector3.new(size.X * 1.3, size.Y / 1.4, size.Z * 1.3) * nn(1, 1.5)
+
+			rock.CFrame = CFrame.new(
+				r1.Position - (Vector3.yAxis / 2),
+				orig.Position
+			) * CFrame.Angles(
+				nn(-.25, .5), nn(-.25, .25), nn(-.25, .25)
+			)
+
+			for _, v in pairs(r1.Instance:GetChildren()) do
+				if v:IsA("Texture") then
+					for _, face in pairs(Enum.NormalId:GetEnumItems()) do
+						local txt = v:Clone()
+						txt.Face = face
+						txt.Parent = rock
+					end
+				end
+		    end
+
+			local stone = rock:Clone()
+			stone.Size = Vector3.new(rock.Size.X * 1.01, rock.Size.Y * .25, rock.Size.Z * 1.01)
+			stone.CFrame = rock.CFrame * CFrame.new(0, rock.Size.Y / 2 - stone.Size.Y / 2.1, 0)
+
+			local rubble = rock:Clone()
+			rubble.CFrame = CFrame.new(
+				r2.Position - (Vector3.yAxis * size * .4),
+				orig.Position
+			) * CFrame.Angles(
+				nn(-1, -.3), nn(-.15, .15), nn(-.15, .15)
+			)
+
+			local pebble = stone:Clone()
+			pebble.CFrame = rubble.CFrame * CFrame.new(0, rubble.Size.Y / 2 - pebble.Size.Y / 2.1, 0)
+
+			rock.Parent = rocks
+			stone.Parent = rocks
+			rubble.Parent = rocks
+			pebble.Parent = rocks
+
+			if not args.BypassDuration then
+				task.delay(life + 1 * delay, function()
+					for _, v in pairs(rocks:GetChildren()) do
+						tw:Create(
+							v,
+							TweenInfo.new(1),
+							{
+								Size = Vector3.zero,
+								Position = v.CFrame.Position - Vector3.yAxis * (v.Size.Y + 2)
+							}
+						):Play()
+					end
+				end)
+			end
+		end
+
+		a += b
+	end
+end
+
+local function scale_pe(pe, scale)
+	local old = pe.Parent
+
+	local mdl = Instance.new("Model")
+	pe.Parent = mdl
+	mdl:ScaleTo(scale)
+
+	pe.Parent = old
+	mdl:Destroy()
+end
+
+local function change_lifetime(pe, scale)
+	for _, v in pairs(pe:GetDescendants()) do
+		if v:IsA("ParticleEmitter") then
+			v.Lifetime = NumberRange.new(v.Lifetime.Min * scale, v.Lifetime.Max * scale)
+		end
+	end
+end
+
+local function play_pe(fx)
+	for _, v in pairs(fx:GetDescendants()) do
+		if v:IsA("ParticleEmitter") then
+			v.Enabled = false
+			task.delay(v:GetAttribute("EmitDelay") or 0, v.Emit, v, v:GetAttribute("EmitCount"))
+		end
+	end
+end
+
+local function create_fx(t, victim, ep, scale)
+	if typeof(ep) ~= "CFrame" then
+		ep = ep or victim.HumanoidRootPart
+	else
+		local oep = ep
+
+		ep = Instance.new("Part", script)
+		ep.Anchored = true
+		ep.Transparency = 1
+		ep.CanCollide = false
+		ep.CanQuery = false
+		ep.CanTouch = false
+		ep.CFrame = oep
+
+		task.delay(3, ep.Destroy, ep)
+	end
+
+	if not t then
+		return
+	end
+
+	local lookup = {
+		Blunt = assets.Effects.Attacks.BluntHit,
+		Slash = assets.Effects.Attacks.SlashHit,
+		DivinePunch = assets.Effects.Attacks.Punch,
+		DivineAirland = assets.Effects.Attacks.Land2,
+		DivineAirblast = assets.Effects.Attacks.Fire,
+		WorldCuttingWind = assets.Effects.Attacks.Wind,
+		SilaTerrainSmack = assets.Effects.Attacks.Smack,
+		SilaTerrainStomp = assets.Effects.Attacks.Stomp,
+		WorldCuttingThrow = assets.Effects.Attacks.Throw,
+	}
+
+	local fx = lookup[t]:Clone()
+
+	if scale then
+		scale_pe(fx, scale)
+	end
+
+	fx.Parent = ep
+	fx.CanCollide = false
+	fx.CanQuery = false
+	fx.CanTouch = false
+	fx.Anchored = true
+	fx.Massless = true
+	fx.CFrame = ep.CFrame
+	play_pe(fx)
+
+	task.delay(5, fx.Destroy, fx)
+
+	return fx
+end
+
+local function attack(tbl, stats, ep)
+	local victims = tbl
+
+	if #(victims) ~= 0 then
+		local snd = stats.Sound
+
+		if stats.Sound then
+			if typeof(stats.Sound) == "table" then
+				snd = stats.Sound[nn(1, #(stats.Sound), true)]
+			end
+		end
+
+		play(snd, victims[1]:FindFirstChild("HumanoidRootPart"))
+	end
+
+	local dmg = stats.Damage or 0
+
+	for _, victim in pairs(victims) do
+		coroutine.wrap(function()
+			local thum, hrp = victim:FindFirstChildWhichIsA("Humanoid"), victim:FindFirstChild("HumanoidRootPart")
+
+			if thum.Health - dmg <= 0 and stats.DoNotKill then
+				thum.Health = .01
+			else
+				thum.Health -= dmg
+			end
+
+			stun(thum, stats.Stun)
+
+			if stats.Ragdoll then
+				coroutine.wrap(ragdoll)(victim, stats.Ragdoll)
+			end
+
+			if stats.Knockback then
+				local bv = Instance.new("BodyVelocity", hrp)
+				bv.MaxForce = Vector3.one * 10000000
+				bv.Velocity = hum.RootPart.CFrame.LookVector * stats.Knockback[1] + (stats.Knockback[3] or Vector3.zero)
+
+				task.delay(stats.Knockback[2], bv.Destroy, bv)
+			end
+
+			create_fx(stats.HitEffect, victim, ep)
+		end)()
+	end
+end
+
+local function linger(n, stats, dmg_stats, w)
+	local bl = {}
+
+	if #(stats) == 3 then
+		table.insert(stats, "Box")
+	end
+
+	table.insert(stats, bl)
+
+	task.spawn(function()
+		for _ = 1, n do
+			local inhb = hb(unpack(stats))
+
+			for _, v in pairs(inhb) do
+				table.insert(bl, v)
+			end
+
+			attack(inhb, dmg_stats)
+
+			if w then
+				task.wait(w)
+			else
+				task.wait()
+				task.wait()
+			end
+		end
+	end)
+end
+
+local function create_cd(name)
+	local rname = name
+
+	if name == "RushFinish" then
+		rname = "RushAttack"
+	end
+
+	local button = moves[rname][3]
+	local meter = button.Cooldown.Meter
+
+	if not no_cd then
+		meter.Size = UDim2.fromScale(1, 1)
+		tw:Create(meter, TweenInfo.new(.1), {BackgroundTransparency = .75}):Play()
+		tw:Create(meter, TweenInfo.new(cds[name], Enum.EasingStyle.Linear), {Size = UDim2.fromScale(0, 1)}):Play()
+		task.wait(cds[name])
+	end
+
+	dbs[rname] = false
+	meter.BackgroundTransparency = 1
+end
+
+local function cam_shake(plr, type, amt)
+	local ls = assets.Scripts.CameraShaker:Clone()
+	ls:WaitForChild("Type").Value = type
+	ls:WaitForChild("Amount").Value = amt or 1
+	ls.Parent = plr.PlayerGui
+	ls.Enabled = true
+	task.delay(6, ls.Destroy, ls)
+end
+
+local function foot_step(plr, amt, spr)
+	local ls = assets.Scripts.FootstepScript:Clone()
+	ls:WaitForChild("Spread").Value = spr or 1
+	ls:WaitForChild("Amount").Value = amt or 1
+	ls.Parent = plr.PlayerGui
+	ls.Enabled = true
+	task.delay(3, ls.Destroy, ls)
+end
+
+local function handle_footsteps(anim)
+	if anim.RealWeight > 1 and anim.RealWeight > anims.Fall.RealWeight and not dbs.Stunned then
+		task.spawn(play, `Footstep{fsi}`)
+		fsi += 1
+
+		if fsi > 5 then
+			fsi = 1
+		end
+
+		task.spawn(function()
+			for _, plr in pairs(game:GetService("Players"):GetPlayers()) do
+				if plr and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") and (plr.Character.HumanoidRootPart.Position - hum.RootPart.Position).Magnitude <= 64 then
+					foot_step(plr, (anim == anims.Run and 10 or 6), (anim == anims.Run and 4 or 1))
+				end
+			end
+		end)
+	end
+end
+
+-- // https://devforum.roblox.com/t/the-ultimate-guide-to-custom-loadinghealth-bars/1323459 - op post
+
+local function hp_change(h)
+	ui.Main.Health.Text.Value.Text = tostring(math.floor(h))
+
+	local scale = math.max(h / hum.MaxHealth, 0)
+	local main = ui.Main.Health.Container.Bar.Main
+	tw:Create(main, TweenInfo.new(1), {Size = UDim2.fromScale(scale, 1)}):Play()
+	tw:Create(main.ImageLabel, TweenInfo.new(1), {Size = UDim2.fromScale((scale > 0 and (1 / scale) or 0), 1)}):Play()
+end
+
+-- // moves
+
+local trail_thread
+
+local function rush_attack()
+	if dbs.RushAttack or dbs.Stunned then
+		return
+	end
+
+	change(8, 0)
+	dbs.Stunned = true
+	dbs.RushAttack = true
+
+		local snd = Instance.new("Sound")
+		snd.Parent = hum.RootPart
+		snd.SoundId = "rbxassetid://137362942184954"
+		snd.Volume = 3
+		snd:Play()
+
+	local anim = anims[`LMB{cds.RushCount}`]
+	anim:AdjustWeight(3.5 + (cds.RushCount / 10))
+	anim.Stall = .1
+	anim:Play()
+
+	if trail_thread and cds.RushCount ~= 2 then
+		task.cancel(trail_thread)
+	end
+
+	trail_thread = task.spawn(function()
+		for _, v in pairs(raga.TrailParent.Value:GetChildren()) do
+			if v:IsA("Trail") then
+				v.Enabled = true
+			end
+		end
+
+		task.wait(.6)
+
+		for _, v in pairs(raga.TrailParent.Value:GetChildren()) do
+			if v:IsA("Trail") then
+				v.Enabled = false
+			end
+		end
+	end)
+
+	local hbx = {hum.RootPart, CFrame.new(0, -5, -6), Vector3.new(8, 12, 12)}
+
+	if cds.RushCount == 4 then
+		cds.RushCount = 1
+		task.delay(.3, linger, 5, hbx, stats.RushFinish)
+
+		task.delay(.6, function()
+			dbs.Stunned = false
+			change()
+		end)
+		create_cd("RushFinish")
+	else
+		cds.RushCount += 1
+
+		local stat = table.clone(stats.RushAttack)
+		stat.Sound = `LMB{cds.RushCount - 1}HFX`
+		local snd = Instance.new("Sound")
+		snd.Parent = hum.RootPart
+		snd.SoundId = "rbxassetid://6767836089"
+		snd.Volume = 3
+		snd:Play()
+		stat.HitEffect = ((cds.RushCount - 1) == 2 and "Blunt" or "Slash")
+
+		task.delay(.3, linger, 5, hbx, stat)
+
+		coroutine.wrap(function()
+			local clmb = cds.RushCount
+			task.wait(cds.RushFinish / 2 + .4)
+
+			if cds.RushCount == clmb then
+				cds.RushCount = 1
+			end
+		end)()
+
+		create_cd("RushAttack")
+		dbs.Stunned = false
+		change()
+	end
+end
+
+local function divine_airblast()
+	if dbs.DivineAirblast or dbs.Stunned then
+		return
+	end
+
+	change(8, 0)
+	dbs.Stunned = true
+	dbs.DivineAirblast = true
+
+	play("DivineAirblast")
+	anims.DivineAirblast:Play()
+	anims.DivineAirblast:GetMarkerReachedSignal("Hitbox"):Wait()
+	local snd = Instance.new("Sound")
+	snd.Parent = hum.RootPart
+	snd.SoundId = "rbxassetid://3177777370"
+	snd.Volume = 3
+	snd:Play()
+
+	-- // linger(5, table.clone(hitboxes.DivineAirblast), stats.DivineAirblast)
+
+	local bone = hum.RootPart:FindFirstChild("Bone.006", true)
+	create_fx("DivineAirblast", nil, bone.WorldCFrame, 2.6)
+
+	local params = RaycastParams.new()
+	params.FilterDescendantsInstances = {script}
+	params.FilterType = Enum.RaycastFilterType.Exclude
+
+	local orig = bone.WorldPosition
+	local dir = (hum.RootPart.CFrame.LookVector - Vector3.yAxis * .05) * 125
+
+	local result = workspace:Raycast(orig, dir, params) or CFrame.new(orig, orig + dir) * CFrame.new(0, 0, -50)
+	result = result.Position
+
+	local fx = assets.Effects.Attacks.Shoot:Clone()
+	scale_pe(fx, 1.5)
+
+	fx.Parent = script
+	fx.Massless = true
+	fx.Anchored = true
+	fx.CanTouch = false
+	fx.CanQuery = false
+	fx.CanCollide = false
+	fx.CFrame = bone.WorldCFrame * CFrame.Angles(math.pi / 2, 0, 0)
+
+	change_lifetime(fx.Shocks, .3)
+
+	for _, v in pairs(fx:GetDescendants()) do
+		if v:IsA("ParticleEmitter") then
+			task.spawn(function()
+				while v.Enabled do
+					v:Emit(30)
+					task.wait()
+				end
+			end)
+		end
+	end
+
+	local x, y, z = (CFrame.new(fx.Position, result) * CFrame.Angles(0, 0, math.pi / 2)):ToEulerAnglesXYZ()
+
+	tw:Create(fx, TweenInfo.new(.2, Enum.EasingStyle.Linear), {CFrame = CFrame.new(result) * CFrame.Angles(x, y, z)}):Play()
+
+	local bl = {}
+	local s = tick()
+
+	repeat
+		task.wait()
+
+		local inhb = hb(fx, CFrame.identity, Vector3.one * 8, "Box", bl)
+		attack(inhb, stats.DivineAirblast)
+
+		for _, v in pairs(inhb) do
+			table.insert(bl, v)
+		end
+	until tick() - s >= .2
+
+	for _, v in pairs(fx:GetDescendants()) do
+		if v:IsA("ParticleEmitter") then
+			v.Enabled = false
+		end
+	end
+
+	task.delay(3, fx.Destroy, fx)
+
+	local cf = fx.CFrame * CFrame.Angles(math.pi / 2, 0, 0)
+	local fx = create_fx("DivineAirland", nil, cf, .6)
+	change_lifetime(fx, .8)
+	local snd = Instance.new("Sound")
+	snd.Parent = hum.RootPart
+	snd.SoundId = "rbxassetid://4490700134"
+	snd.Volume = 3
+	snd:Play()
+
+	task.spawn(function()
+		local bl = {}
+
+		for _ = 1, 8 do
+			local inhb = hb(fx, CFrame.identity, Vector3.one * 30, "Magnitude", bl)
+			attack(inhb, {Damage = 10, Stun = 2, Ragdoll = 2})
+
+			for _, v in pairs(inhb) do
+				table.insert(bl, v)
+
+				local hrp = v.HumanoidRootPart
+				local bv = Instance.new("BodyVelocity")
+				bv.MaxForce = Vector3.one * 10e7
+				bv.Velocity = (hrp.Position - fx.Position).Unit * 50 + Vector3.yAxis * 25
+				bv.Parent = hrp
+
+				task.delay(.2, bv.Destroy, bv)
+			end
+
+			task.wait()
+		end
+	end)
+
+	anims.DivineAirblast.Stopped:Wait()
+
+	change()
+	dbs.Stunned = false
+	create_cd("DivineAirblast")
+end
+
+local function terrain_toss()
+	if dbs.TerrainToss or dbs.Stunned then
+		return
+	end
+
+	local params = RaycastParams.new()
+	params.FilterDescendantsInstances = {script}
+	params.FilterType = Enum.RaycastFilterType.Exclude
+
+	local floor = workspace:Raycast(hum.RootPart.Position, Vector3.yAxis * -16, params)
+
+	if not floor then
+		return
+	end
+
+	floor = floor.Instance
+
+	change(0, 0)
+	dbs.Stunned = true
+	dbs.TerrainToss = true
+	hum.AutoRotate = false
+
+	local hit = mhit
+
+	local bg = Instance.new("BodyGyro")
+	bg.P = 1e5
+	bg.MaxTorque = Vector3.yAxis * 10e7
+	bg.CFrame = CFrame.new(hum.RootPart.Position, hit)
+	bg.Parent = hum.RootPart
+
+	play("TerrainToss")
+	anims.TerrainToss:Play()
+	task.wait(.3)
+
+	local cf = hum.RootPart.CFrame * CFrame.new(-.5, hum.RootPart.Size.Y * -3.5, -4)
+	local snd = Instance.new("Sound")
+	snd.Parent = hum.RootPart
+	snd.SoundId = "rbxassetid://9057591742"
+	--snd.PlaybackSpeed = 2
+	snd.Volume = 3
+	snd:Play()
+	coroutine.wrap(rocky)({
+		Radius = 6,
+		Amount = 12,
+		Origin = cf,
+		Size = Vector3.new(1, 1.5, 1)
+	})
+
+	for _, plr in pairs(game:GetService("Players"):GetPlayers()) do
+		if plr and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") and (plr.Character.HumanoidRootPart.Position - hum.RootPart.Position).Magnitude <= 24 then
+			cam_shake(plr, "Bump")
+		end
+	end
+
+	local fx = create_fx("SilaTerrainStomp", nil, cf)
+	change_lifetime(fx, 1.5)
+
+	local rock = assets.Effects.Attacks.RockProjectile:Clone()
+	rock.Parent = script
+	rock.Anchored = false
+	rock.Color = floor.Color
+	rock.Material = floor.Material
+	rock.AlignPosition.RigidityEnabled = true
+	rock.Position = fx.Position - Vector3.yAxis * 12
+	rock.AlignPosition.Attachment1 = hum.RootPart:FindFirstChild("Bone.033", true)
+
+	local txts = {}
+
+	for _, v in pairs(floor:GetChildren()) do
+		if v:IsA("Decal") or v:IsA("Texture") then
+			v:Clone().Parent = rock
+			table.insert(txts, v)
+		end
+	end
+
+	local s = tick()
+
+	while tick() - s < .5 do
+		task.wait()
+		hit = mhit
+		bg.CFrame = CFrame.new(hum.RootPart.Position, hit)
+	end
+
+	local cf = hum.RootPart.CFrame * CFrame.new(-.5, 0, -4)
+
+	local fx = create_fx("SilaTerrainSmack", nil, cf)
+	change_lifetime(fx, 1.1)
+
+	rock.Anchored = true
+	rock.AlignPosition:Destroy()
+
+	task.spawn(function()
+		local s = tick()
+		local start = rock.Position
+		local lv = (hit - start).Unit
+		rock.CFrame = CFrame.new(rock.Position, hit)
+
+		while (start - rock.Position).Magnitude <= 1024 and rock.Parent do
+			local dt = task.wait()
+			local tdist = (lv * 8) * (dt * 60)
+
+			local params = OverlapParams.new()
+			params.FilterDescendantsInstances = {script}
+			params.FilterType = Enum.RaycastFilterType.Exclude
+
+			local inhb = workspace:GetPartBoundsInBox(rock.CFrame, rock.Size, params)
+
+			if #(inhb) > 0 and (start - rock.Position).Magnitude > 16 then
+				rock:Destroy()
+
+				for _ = 1, math.random(6, 10) do
+					local f = Instance.new("Part")
+					f.Color = rock.Color
+					f.Material = rock.Material
+					f.Size = Vector3.one * math.random() * 2
+					f.Position = rock.Position + Vector3.one * (math.random() - .5)
+
+					for _, v in pairs(txts) do
+						v:Clone().Parent = f
+					end
+
+					local bv = Instance.new("BodyVelocity", f)
+					bv.MaxForce = Vector3.one * 10e7
+					bv.Velocity = Vector3.new(nn(-75, 75), nn(0, 75), nn(-75, 75))
+
+					f.Parent = script
+					task.delay(5, f.Destroy, f)
+					task.delay(.1, bv.Destroy, bv)
+				end
+
+				for _, plr in pairs(game:GetService("Players"):GetPlayers()) do
+					if plr and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") and (plr.Character.HumanoidRootPart.Position - rock.Position).Magnitude <= 24 then
+						cam_shake(plr, "Bump")
+					end
+				end
+
+				play("TerrainTossHit", nil, rock.CFrame)
+				local snd2 = Instance.new("Sound")
+				snd2.Parent = workspace
+				snd2.SoundId = "rbxassetid://3744400428"
+				snd2.Volume = 1
+				snd2:Play()	
+				local snd3 = Instance.new("Sound")
+				snd3.Parent = workspace
+				snd3.SoundId = "rbxassetid://4307213273"
+				snd3.Volume = 1
+				snd3:Play()	
+				local fx = create_fx("SilaTerrainStomp", nil, CFrame.new(rock.Position), 2)
+				change_lifetime(fx, 1.5)
+				coroutine.wrap(rocky)({
+					Radius = 9,
+					Amount = 12,
+					Origin = rock.CFrame,
+					Size = Vector3.one * 1.5,
+					Exclude = get_hums(rock.Position, 9)
+				})
+
+				task.spawn(function()
+					local bl = {}
+
+					for _ = 1, 8 do
+						local inhb = hb(fx, CFrame.identity, Vector3.one * 16, "Magnitude", bl)
+						attack(inhb, {Damage = 35, Stun = 2, Ragdoll = 2})
+
+						for _, v in pairs(inhb) do
+							table.insert(bl, v)
+
+							local hrp = v.HumanoidRootPart
+							local bv = Instance.new("BodyVelocity")
+							bv.MaxForce = Vector3.one * 10e7
+							bv.Velocity = (hrp.Position - fx.Position).Unit * 50 + Vector3.yAxis * 35
+							bv.Parent = hrp
+
+							task.delay(.2, bv.Destroy, bv)
+						end
+
+						task.wait()
+					end
+				end)
+
+				break
+			end
+
+			rock.CFrame += tdist
+		end
+
+		if rock.Parent then
+			rock:Destroy()
+		end
+	end)
+
+	anims.TerrainToss.Stopped:Wait()
+
+	change()
+	bg:Destroy()
+	dbs.Stunned = false
+	hum.AutoRotate = true
+	create_cd("TerrainToss")
+end
+
+local function divine_hook()
+	if dbs.DivineHook or dbs.Stunned or hum.FloorMaterial == Enum.Material.Air then
+		return
+	end
+
+	change(0, 0)
+	dbs.Stunned = true
+	dbs.DivineHook = true
+	hum.AutoRotate = false
+
+	play("DivineHookStart")
+	anims.DivineHook:Play()
+
+	anims.DivineHook:GetMarkerReachedSignal("Hop"):Wait()
+	change(128, 0)
+
+	hum.AutoRotate = true
+
+	local bv = Instance.new("BodyVelocity")
+	bv.MaxForce = Vector3.yAxis * 10e7
+	bv.Velocity = Vector3.yAxis * 175
+	bv.Parent = hum.RootPart
+	local snd = Instance.new("Sound")
+	snd.Parent = hum.RootPart
+	snd.SoundId = "rbxassetid://9076453292"
+	--snd.PlaybackSpeed = 2
+	snd.Volume = 3
+	snd:Play()
+
+	task.delay(.1, bv.Destroy, bv)
+	-- // tw:Create(hum.RootPart, TweenInfo.new(.25), {CFrame = hum.RootPart.CFrame + Vector3.yAxis * 35}):Play()
+
+	local cf = hum.RootPart.CFrame * CFrame.new(0, hum.RootPart.Size.Y * -3.5, 0)
+	local fx = assets.Effects.Attacks.Up:Clone()
+	change_lifetime(fx, 1.5)
+	fx.CFrame = cf
+	fx.Parent = script
+	task.delay(3, fx.Destroy, fx)
+
+	play_pe(fx)
+
+	local fx = assets.Effects.Attacks.Speed:Clone()
+	fx.Anchored = false
+	fx.Massless = true
+	fx.Parent = script
+	task.delay(3, fx.Destroy, fx)
+
+	local w = Instance.new("Weld")
+	w.Part0 = fx
+	w.Part1 = hum.RootPart
+	w.Parent = fx
+
+	local yep = true
+
+	for _, v in pairs(fx:GetDescendants()) do
+		if v:IsA("ParticleEmitter") then
+			v.Enabled = false
+			v:Emit(v:GetAttribute("EmitCount"))
+
+			task.spawn(function()
+				while yep do
+					v:Emit(1)
+					task.wait(1 / v.Rate)
+				end
+			end)
+		end
+	end
+
+	anims.DivineHook:GetMarkerReachedSignal("Apex"):Wait()
+	task.wait(.4)
+
+	yep = false
+	hum.AutoRotate = false
+	hum.RootPart.Anchored = true
+
+	local params = RaycastParams.new()
+	params.FilterDescendantsInstances = {script}
+	params.FilterType = Enum.RaycastFilterType.Exclude
+
+	local result = workspace:Raycast(hum.RootPart.Position, Vector3.yAxis * -1024, params)
+	local old = CFrame.new(result.Position + Vector3.yAxis * hum.HipHeight) * CFrame.Angles(hum.RootPart.CFrame:ToEulerAnglesXYZ())
+	cf = old * CFrame.new(0, hum.RootPart.Size.Y * -3.5, 0)
+
+	tw:Create(hum.RootPart, TweenInfo.new(.1, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {CFrame = old}):Play()
+	anims.DivineHook:GetMarkerReachedSignal("Impact"):Wait()
+
+	for _, plr in pairs(game:GetService("Players"):GetPlayers()) do
+		if plr and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") and (plr.Character.HumanoidRootPart.Position - hum.RootPart.Position).Magnitude <= 24 then
+			cam_shake(plr, "Explosion")
+		end
+	end
+
+	local snd2 = Instance.new("Sound")
+	snd2.Parent = hum.RootPart
+	snd2.SoundId = "rbxassetid://9118612945"
+	--snd2.PlaybackSpeed = 2
+	snd2.Volume = 3
+	snd2:Play()
+
+	local snd3 = Instance.new("Sound")
+	snd3.Parent = hum.RootPart
+	snd3.SoundId = "rbxassetid://9118612945"
+	--snd3.PlaybackSpeed = 2
+	snd3.Volume = 3
+	snd3:Play()
+
+	local snd4 = Instance.new("Sound")
+	snd4.Parent = hum.RootPart
+	snd4.SoundId = "rbxassetid://9118612956"
+	--snd3.PlaybackSpeed = 2
+	snd4.Volume = 5
+	snd4:Play()
+	
+	hum:ChangeState(Enum.HumanoidStateType.Landed)
+	hum.RootPart.AssemblyLinearVelocity = Vector3.zero
+
+	coroutine.wrap(rocky)({
+		Radius = 18,
+		Amount = 24,
+		Origin = cf,
+		Size = Vector3.new(2.5, 3.5, 2.5)
+	})
+
+	change_lifetime(create_fx("DivineAirland", nil, cf, 1.2), 1.5)
+
+	local inhb = hb(hum.RootPart, hum.RootPart.CFrame:ToObjectSpace(cf), Vector3.one * 30, "Magnitude")
+	attack(inhb, stats.DivineHookStart)
+
+	anims.DivineHook:GetMarkerReachedSignal("Teleport"):Wait()
+
+	if #(inhb) < 1 then
+		anims.DivineHook:Stop()
+	else
+		play("DivineHookHit")
+		local victim = inhb[1]
+		local vhum = victim.Humanoid
+		vhum.AutoRotate = false
+		vhum.RootPart.Anchored = true
+		local snd4 = Instance.new("Sound")
+		snd4.Parent = vhum.RootPart
+		snd4.SoundId = "rbxassetid://6603295565"
+		snd4.Volume = 6
+		snd4:Play()
+		local snd5 = Instance.new("Sound")
+		snd5.Parent = vhum.RootPart
+        snd5.Parent = vhum.RootPart
+		snd5.SoundId = "rbxassetid://3183222154"
+		snd5.Volume = 3
+		snd5:Play()
+
+		local lk = CFrame.new(hum.RootPart.Position, vhum.RootPart.Position)
+		local _, y, _ = lk:ToEulerAnglesXYZ()
+
+		local cf = CFrame.new(lk.Position) * CFrame.Angles(0, y, 0)
+		cf *= CFrame.new(.5, -1.5, -6)
+
+		hum.RootPart.CFrame = lk
+		hum.RootPart.Orientation *= Vector3.yAxis
+
+		tw:Create(vhum.RootPart, TweenInfo.new(.1), {CFrame = CFrame.new(cf.Position, hum.RootPart.Position)}):Play()
+
+		anims.DivineHook:GetMarkerReachedSignal("Impale"):Wait()
+		create_fx("DivinePunch", nil, cf * CFrame.Angles(math.pi / -2, 0, 0), 1.6)
+		attack({victim}, stats.DivineHookStop)
+
+		task.delay(.5, function()
+			vhum.AutoRotate = true
+			vhum.RootPart.Anchored = false
+		end)
+
+		anims.DivineHook.Stopped:Wait()
+	end
+
+	change()
+	dbs.Stunned = false
+	hum.AutoRotate = true
+	hum.RootPart.Anchored = false
+	create_cd("DivineHook")
+end
+
+local function world_slash()
+	if dbs.WorldSlash or dbs.Stunned then
+		return
+	end
+
+	change(0, 0)
+	dbs.Stunned = true
+	dbs.WorldSlash = true
+
+	local snd = Instance.new("Sound")
+	snd.Parent = workspace
+	snd.SoundId = "rbxassetid://8128407082"
+	snd.PlaybackSpeed = 2
+	snd.Volume = 3
+	snd:Play()
+	local snd0 = Instance.new("Sound")
+	snd0.Parent = workspace
+	snd0.SoundId = "rbxassetid://9119707271"
+	snd0.Volume = 5
+	
+	
+	--[[local snd = play("WorldSlash")
+	snd.RollOffMaxDistance = 2048
+	snd.RollOffMinDistance = 512
+	snd.Volume = 3]]
+
+	anims.WorldCuttingSlash:Play()
+	anims.WorldCuttingSlash:GetMarkerReachedSignal("SuperCut"):Once(function()
+		snd0:Play()
+		re:FireClient(owner, "FlashLight", {Color3.new(1, 1, 1)})
+		local cf = hum.RootPart.CFrame * CFrame.new(0, 0, -500)
+
+		for _, plr in pairs(game:GetService("Players"):GetPlayers()) do
+			if plr and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") and (plr.Character.HumanoidRootPart.Position - cf.Position).Magnitude <= 512 then
+				cam_shake(plr, "IntenseExplosion")
+			end
+		end
+
+		local snd = Instance.new("Sound")
+		--snd.Parent = cf
+		snd.SoundId = "rbxassetid://8128400427"
+		snd.Volume = 3
+		snd:Play()
+
+		re:FireClient(owner, "QuickZoom")
+
+		local amt = 8
+		local fakes = {}
+		local mdl = Instance.new("Model")
+		local h = Instance.new("Highlight", mdl)
+		h.FillTransparency = 1
+		h.OutlineTransparency = 1
+
+		for i = 0, (amt - 1) do
+			local p = Instance.new("Part")
+			p.Anchored = true
+			p.CanTouch = false
+			p.CanCollide = false
+			p.Transparency = 100
+			p.Material = Enum.Material.Glass
+			p.Size = Vector3.new(365, .05, 1415)
+			p.CFrame = hum.RootPart.CFrame * CFrame.new(((i - (amt / 2)) / (amt / 2)) * 64, nn(-3, 64), p.Size.Z / -2 + 4) * CFrame.Angles(math.rad(nn(-15, 15)), 0, math.rad(nn(-180, 180)))
+			p.Parent = mdl
+			tw:Create(p, TweenInfo.new(.5), {Transparency = 1}):Play()
+
+			table.insert(fakes, p)
+		end
+
+		task.delay(.5, h.Destroy, h)
+		local snd = Instance.new("Sound")
+		snd.Parent = workspace
+		snd.SoundId = "rbxassetid://8128400427"
+		snd.Volume = 3
+		snd:Play()
+		local snd2 = Instance.new("Sound")
+		snd2.Parent = workspace
+		snd2.SoundId = "rbxassetid://4299587893"
+		snd2.Volume = 3
+		snd2:Play()
+		local snd3 = Instance.new("Sound")
+		snd3.Parent = workspace
+		snd3.SoundId = "rbxassetid://8128403163"
+		snd3.Volume = 3
+		snd3:Play()
+		mdl.Parent = script
+
+		if hum.FloorMaterial ~= Enum.Material.Air then
+			local debris = assets.Effects.WorldSlash.Debris:Clone()
+			debris.Parent = script
+			debris:SetPrimaryPartCFrame(hum.RootPart.CFrame * CFrame.new(0, -500, -12) * CFrame.Angles(0, math.pi / 2, 0))
+
+			local params = RaycastParams.new()
+			params.FilterDescendantsInstances = {script}
+			params.FilterType = Enum.RaycastFilterType.Exclude
+
+			task.spawn(function()
+				for i = 1, 90, 10 do
+					for j = 0, 9 do
+						local p = debris:FindFirstChild(tostring(i + j))
+						local goal = p.Position + Vector3.yAxis * 485
+						local result = workspace:Raycast(goal + Vector3.yAxis * 50, Vector3.yAxis * -256, params)
+
+						if result then
+							local result = result.Instance
+							p.Color = result.Color
+							p.Material = result.Material
+
+							for _, v in pairs(result:GetChildren()) do
+								if v:IsA("Decal") or v:IsA("Texture") then
+									v:Clone().Parent = p
+								end
+							end
+
+							tw:Create(p, TweenInfo.new(.15), {Position = goal}):Play()
+
+							task.delay(3, function()
+								tw:Create(p, TweenInfo.new(2), {Position = p.Position - Vector3.yAxis * p.Size.Y * 2}):Play()
+							end)
+						else
+							p:Destroy()
+						end
+					end
+
+					task.wait()
+					task.wait()
+					task.wait()
+				end
+			end)
+
+			task.delay(5, debris.Destroy, debris)
+		end
+
+		local params = OverlapParams.new()
+		params.FilterType = Enum.RaycastFilterType.Exclude
+		params.FilterDescendantsInstances = {script, workspace:FindFirstChild("Base")}
+
+		local dismantle = true
+		local cf, size = mdl:GetBoundingBox()
+
+		local options = {
+			SplitApart = true,
+			CollisionFidelity = Enum.CollisionFidelity.Default,
+			RenderFidelity = Enum.RenderFidelity.Performance
+		}
+
+		local coptions = {
+			tolerance = 1,
+			weldConstraintPreserve = Enum.WeldConstraintPreserve.All
+		}
+
+		local main = hum.RootPart.Position
+
+		for _, v in pairs(workspace:GetPartBoundsInBox(cf, size, params)) do
+			if not v:IsA("MeshPart") then
+				if dismantle and not findhum(v) then
+					local params = OverlapParams.new()
+					params.FilterDescendantsInstances = fakes
+					params.FilterType = Enum.RaycastFilterType.Include
+
+					local stuffs = workspace:GetPartsInPart(v, params)
+
+					if #(stuffs) < 1 then
+						v.Anchored = false
+						continue
+					end
+
+					local msh = v:FindFirstChildOfClass("SpecialMesh")
+
+					if msh then
+						msh:Destroy()
+					end
+
+					task.spawn(function()
+						local success, parts = pcall(function()
+							--return gs:SubtractAsync(v, stuffs, options)
+						end)
+
+						if success and parts and #(parts) > 1 then
+							for _, p in pairs(parts) do
+								p.Anchored = false
+								p.CFrame = p.CFrame
+								p.UsePartColor = true
+
+								local bv = Instance.new("BodyVelocity", p)
+								bv.MaxForce = Vector3.one * 10e7
+								bv.Velocity = (p.Position - main).Unit * nn(250, 750, true)
+								task.delay(.1, bv.Destroy, bv)
+
+								p.Parent = v.Parent
+							end
+
+							local consts = gs:CalculateConstraintsToPreserve(v, parts, coptions)
+
+							for _, c in pairs(consts) do
+								if c.Attachment then
+									c.Constraint.Parent = c.ConstraintParent
+									c.Attachment.Parent = c.AttachmentParent
+								elseif c.NoCollisionConstraint then
+									local ncc = Instance.new("NoCollisionConstraint")
+									ncc.Part0 = c.NoCollisionPart0
+									ncc.Part1 = c.NoCollisionPart1
+									ncc.Parent = c.NoCollisionParent
+								elseif c.WeldConstraint then
+									local nw = Instance.new("WeldConstraint")
+									nw.Part0 = c.WeldConstraintPart0
+									nw.Part1 = c.WeldConstraintPart1
+									nw.Parent = c.WeldConstraintParent
+								end
+							end
+
+							v:Destroy()
+						end
+					end)
+				else
+					for _, j in pairs(v:GetJoints()) do
+						j:Destroy()
+					end
+
+					v.Anchored = false
+
+					local bv = Instance.new("BodyVelocity")
+					bv.MaxForce = Vector3.one * 10e7
+					bv.Velocity = (v.Position - main).Unit * nn(250, 750, true)
+					bv.Parent = v
+
+					task.delay(.1, bv.Destroy, bv)
+				end
+			end
+		end
+
+		task.delay(4, mdl.Destroy, mdl)
+	end)
+
+	local bone = hum.RootPart:FindFirstChild("Bone.077", true)
+	local fx = assets.Effects.Attacks.Hand:Clone()
+	local a0 = Instance.new("Attachment", fx)
+	local rc = Instance.new("RigidConstraint", fx)
+	rc.Attachment0 = a0
+	rc.Attachment1 = bone
+	fx.Parent = script
+	task.delay(2, fx.Destroy, fx)
+
+	local yep = true
+
+	for _, v in pairs(fx:GetChildren()) do
+		if v:IsA("ParticleEmitter") then
+			v.Enabled = false
+
+			task.spawn(function()
+				while yep do
+					v:Emit(1)
+					task.wait(1 / v.Rate)
+				end
+			end)
+		end
+	end
+
+	task.wait(.25)
+	yep = false
+
+	create_fx("WorldCuttingThrow", nil, hum.RootPart.CFrame * CFrame.new(0, hum.RootPart.Size.Y * -2.5, -35) * CFrame.Angles(math.pi / 2, 0, 0))
+	task.wait(.1)
+
+	create_fx("WorldCuttingWind", nil, hum.RootPart.CFrame * CFrame.new(0, hum.RootPart.Size.Y * -2.5, -5) * CFrame.Angles(math.pi / 2, 0, 0), 3)
+
+	local beams = assets.Effects.Attacks.Beams:Clone()
+	beams:ScaleTo(1.3)
+	beams:SetPrimaryPartCFrame(hum.RootPart.CFrame * CFrame.new(0, hum.RootPart.Size.Y * -5.5, 0))
+	beams.Parent = script
+	task.delay(3, beams.Destroy, beams)
+
+	local speeds, trans = {}, {}
+
+	for _, v in pairs(beams:GetDescendants()) do
+		if string.match(v.Name, "Far") then
+			local old = v.CFrame
+			v.CFrame *= CFrame.new(0, 0, 34)
+			tw:Create(v, TweenInfo.new(.2, Enum.EasingStyle.Sine), {CFrame = old}):Play()
+		elseif v:IsA("Beam") then
+			trans[v] = v.Transparency
+			speeds[v] = v.TextureSpeed
+		end
+	end
+
+	local n1 = Instance.new("NumberValue")
+	local n2 = Instance.new("NumberValue")
+
+	n1.Changed:Connect(function()
+		for i, v in pairs(speeds) do
+			i.TextureSpeed = v * n1.Value
+		end
+	end)
+
+	n2.Changed:Connect(function()
+		for i, v in pairs(trans) do
+			local kps = v.Keypoints
+
+			for j, w in pairs(kps) do
+				kps[j] = NumberSequenceKeypoint.new(w.Time, w.Value * n2.Value)
+			end
+
+			i.Transparency = NumberSequence.new(kps)
+		end
+	end)
+
+	n1.Value = 3.5
+	n2.Value = .95
+	n1.Parent = script
+	n2.Parent = script
+	task.delay(3, n1.Destroy, n1)
+	task.delay(3, n2.Destroy, n2)
+
+	tw:Create(n2, TweenInfo.new(1.5, Enum.EasingStyle.Sine), {Value = 1.2}):Play()
+
+	task.delay(.1, function()
+		tw:Create(n1, TweenInfo.new(.76, Enum.EasingStyle.Sine), {Value = .1}):Play()
+	end)
+
+	anims.WorldCuttingSlash.Stopped:Wait()
+
+	change()
+	dbs.Stunned = false
+	create_cd("WorldSlash")
+end
+
+hp_change(hum.Health)
+hum.HealthChanged:Connect(hp_change)
+
+anims.Run:GetMarkerReachedSignal("Footstep"):Connect(function()
+	handle_footsteps(anims.Run)
+end)
+
+anims.Walk:GetMarkerReachedSignal("Footstep"):Connect(function()
+	handle_footsteps(anims.Walk)
+end)
+
+hum:GetAttributeChangedSignal("Jump"):Connect(function()
+	if hum.Jump then
+		anims.Jump:Play()
+		anims.Jump:AdjustWeight(3.5)
+	end
+end)
+
+hum.FreeFalling:Connect(function(fall)
+	if fall then
+		anims.Fall:AdjustWeight(3)
+		anims.Jump:AdjustWeight(3.5)
+	elseif not fall then
+		anims.Fall:AdjustWeight(0)
+		anims.Jump:AdjustWeight(0)
+	end
+end)
+
+hum.Running:Connect(function(spd)
+	if spd > 1 then
+		anims.Run:AdjustWeight(2.5)
+		anims.Walk:AdjustWeight(2.5)
+	else
+		anims.Run:AdjustWeight(1)
+		anims.Walk:AdjustWeight(1)
+	end
+end)
+
+local theme = Instance.new("Sound")
+theme.Volume = .5
+theme.Name = "Theme"
+theme.Looped = true
+theme.RollOffMaxDistance = 300
+theme.SoundId = "rbxassetid://18665805080"
+theme.Parent = hum.RootPart
+theme:Play()
+
+ure.OnServerEvent:Connect(function(plr, args)
+	if plr ~= owner then
+		return "silly goose"
+	end
+
+	mhit = args.MouseHit
+
+	if not args.Touch then
+		downs = args.Keys
+	end
+
+	for i, v in pairs(buttons) do
+		if downs[i] then
+			tw:Create(v.Action, TweenInfo.new(.25), {BackgroundTransparency = .75}):Play()
+		else
+			tw:Create(v.Action, TweenInfo.new(.25), {BackgroundTransparency = 1}):Play()
+		end
+	end
+end)
+
+re.OnServerEvent:Connect(function(plr, args)
+	if plr ~= owner then
+		return "silly goose"
+	end
+
+	if args.Action == "RushAttack" then
+		rush_attack()
+	elseif args.Action == "DivineAirblast" then
+		divine_airblast()
+	elseif args.Action == "TerrainToss" then
+		terrain_toss()
+	elseif args.Action == "DivineHook" then
+		divine_hook()
+	elseif args.Action == "WorldSlash" then
+		world_slash()
+	elseif args.Action == "ToggleRun" and not dbs.Stunned then
+		dbs.Run = not dbs.Run
+		anims[dbs.Run and "Walk" or "Run"]:Stop()
+		anims[dbs.Run and "Run" or "Walk"]:Play((dbs.Run and .6 or 1))
+
+		raga:SetAttribute("OWS", (dbs.Run and 48 or 18))
+		change()
+	elseif args.Action == "NoCooldowns" and cool_guy then
+		no_cd = not no_cd
+		print(`No cooldowns: {no_cd}`)
+	end
+end)
+
+NLS([[local owner = game:GetService("Players").LocalPlayer
+
+local re = script.Parent
+local ure = re.KeyStuffs
+local m = owner:GetMouse()
+local hum = re.Parent.Humanoid
+local cam = workspace.CurrentCamera
+local old = cam.CFrame
+
+local hrp = hum.RootPart
+local cp = hrp.Parent.CameraPart
+local tw = game:GetService("TweenService")
+local uis = game:GetService("UserInputService")
+
+cam.CameraType = Enum.CameraType.Custom
+
+for _ = 1, 50 do
+	cam.CFrame = old
+	cam.CameraSubject = hum
+end
+
+local keybinds = {
+	e = "DivineAirblast",
+	r = "TerrainToss",
+	t = "DivineHook",
+	f = "WorldSlash",
+	z = "ToggleRun",
+	l = "NoCooldowns"
+}
+
+re.OnClientEvent:Connect(function(what, args)
+	if what == "DoMove" then
+		re:FireServer({
+			Action = args
+		})
+	elseif what == "QuickZoom" then
+		tw:Create(cam, TweenInfo.new(.1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, 0, true), {FieldOfView = cam.FieldOfView * 1.5}):Play()
+	elseif what == "FlashLight" then
+		local cce = Instance.new("ColorCorrectionEffect", cam)
+		cce.Saturation = 2
+		cce.Brightness = 2
+		cce.Name = "MahoragaFlashTint"
+
+		local h = Instance.new("Highlight")
+		h.Adornee = hum.Parent
+		h.FillTransparency = 0
+		h.OutlineTransparency = 1
+		h.FillColor = Color3.new()
+		h.Parent = cam
+
+		tw:Create(cce, TweenInfo.new(.05), {TintColor = args[1]}):Play()
+		task.wait(.05)
+
+		h.FillColor = args[1]
+
+		tw:Create(cce, TweenInfo.new(.05), {TintColor = Color3.new()}):Play()
+		task.wait(.05)
+
+		h:Destroy()
+		cce.Saturation = 0
+		cce.Brightness = 0
+
+		tw:Create(cce, TweenInfo.new(.1), {TintColor = Color3.new(1, 1, 1)}):Play()
+		task.wait(.1)
+
+		cce:Destroy()
+	end
+end)
+
+workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
+	cam = workspace.CurrentCamera
+
+	for _ = 1, 50 do
+		cam.CameraSubject = hum
+	end
+end)
+
+uis.InputBegan:Connect(function(i, gpc)
+	if gpc then
+		return
+	end
+
+	if i.UserInputType == Enum.UserInputType.MouseButton1 then
+		re:FireServer({
+			Action = "RushAttack"
+		})
+	else
+		local k = string.lower(i.KeyCode.Name)
+
+		if keybinds[k] then
+			re:FireServer({
+				Action = keybinds[k]
+			})
+		end
+	end
+end)
+
+game:GetService("RunService").PreRender:Connect(function()
+	hum.CameraOffset = hum.CameraOffset:Lerp(hrp.CFrame:ToObjectSpace(cp.CFrame).Position - Vector3.yAxis * 1.5, .1)
+
+	local keys = {}
+
+	for _, v in pairs(uis:GetKeysPressed()) do
+		keys[string.lower(v.KeyCode.Name)] = true
+	end
+
+	keys.m1 = uis:IsMouseButtonPressed(Enum.UserInputType.MouseButton1)
+
+	ure:FireServer({
+		Keys = keys,
+		Downs = true,
+		Touch = uis.TouchEnabled,
+		MouseHit = m.Hit.Position
+	})
+end)]],re)
