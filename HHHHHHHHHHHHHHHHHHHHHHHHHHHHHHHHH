@@ -1,0 +1,1550 @@
+local storage = Instance.new("Folder")
+storage.Name = "Hakari_Storage"
+storage.Parent = workspace
+local player = owner
+if not player then
+	warn("none")
+	return
+end
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:FindFirstChildOfClass("Humanoid") or character:WaitForChild("Humanoid")
+local root = character:FindFirstChild("HumanoidRootPart") or character:WaitForChild("Torso")
+local assets = require(133434755144856)
+local meshes = assets.Effects.Meshes
+-- local mods = require(116312593980212)
+-- local scripts = mods("Scripts")
+local client = Instance.new("RemoteEvent")
+client.Parent = character
+local modules = assets:WaitForChild("Modules")
+local scriptsa = assets:WaitForChild("Scripts")
+local CombatFunctions = require(modules:WaitForChild("CombatFunctions"))
+local hitboxes = modules:WaitForChild("MuchachoHitbox") and require(modules.MuchachoHitbox) or nil
+local animations = assets:WaitForChild("Animations")
+local animator = require(assets:WaitForChild("Animator"):WaitForChild("AnimationTrack"))
+local camerastuff = require(modules:WaitForChild("CameraDesecrator"))
+humanoid.MaxHealth = 650
+humanoid.Health = 650
+
+local rightarm = assets.arm_effect:Clone()
+rightarm.weld.Part1 = character["Right Arm"]
+rightarm.Parent = storage
+
+local left_arm = assets.arm1:Clone()
+left_arm.weld.Part1 = character["Left Arm"]
+left_arm.Parent = storage
+
+local g = Instance.new("BodyGyro")
+g.Parent = torso
+local debounce = false
+local remotefunction = game:GetService("TestService"):FindFirstChild("Invoker") or Instance.new("RemoteFunction")
+remotefunction.Name = "Invoker"
+remotefunction.Parent = game:GetService("TestService")
+
+
+local function impact(plr, count)
+	local ls = scriptsa.ImpactFrame:Clone()
+	ls:WaitForChild("Count").Value = count or 1
+	ls.Parent = plr.PlayerGui
+	ls.Enabled = true
+	task.delay(1, ls.Destroy, ls)
+end
+
+local function brightness(plr, clr, amt, dur)
+	local ls = scriptsa.Brightness:Clone()
+	ls:WaitForChild("Duration").Value = dur or 1
+	ls:WaitForChild("Brightness").Value = amt or 0.35
+	ls:WaitForChild("Color").Value = clr or Color3.new(1, 1, 1)
+	ls.Parent = plr.PlayerGui
+	ls.Enabled = true
+	task.delay(dur + 0.5, function() ls:Destroy() end)
+end
+
+local function client_fx(target_root ,rad, func, ...)
+	local rooting = target_root.Position
+	for _, plr in ipairs(game:GetService("Players"):GetPlayers()) do
+		local char = plr.Character
+		local hrp = char and char:FindFirstChild("HumanoidRootPart")
+		if hrp and (hrp.Position - rooting).Magnitude <= (rad / 3) then
+			func(plr, ...)
+		end
+	end
+end
+
+function CameraShake(conf,pos:Vector3,_time:number)
+	_time = _time or 10
+	conf.FadeIn = conf.FadeIn or 0
+	conf.FadeOut = conf.FadeOut or .5
+	conf.posInfluence = conf.posInfluence or Vector3.new(.5,.5,.5)
+	conf.rotInfluence = conf.rotInfluence or Vector3.new(.25,.25,.25)
+	conf.Roughness = conf.Roughness or 10
+	conf.Magnitude = conf.Magnitude or 10
+	conf.Distance = conf.Distance or 1000
+	for i,plr in pairs(game:GetService("Players"):GetPlayers()) do
+		task.spawn(function()
+			local camerashake = scriptsa.CameraShaker:Clone()
+			camerashake:SetAttribute("FadeIn",conf.FadeIn)
+			camerashake:SetAttribute("FadeOut",conf.FadeOut)
+			camerashake:SetAttribute("posInfluence",conf.posInfluence)
+			camerashake:SetAttribute("rotInfluence",conf.rotInfluence)
+			camerashake:SetAttribute("Roughness",conf.Roughness)
+			camerashake:SetAttribute("Magnitude",conf.Magnitude)
+			camerashake.Parent = plr.PlayerGui
+			camerashake.Enabled = true
+			game:GetService("Debris"):AddItem(camerashake,_time)
+		end)
+	end
+
+end
+
+function Replicate(root: BasePart | CFrame, radius: number, func: (Player, ...any) -> (), ...)
+	for _, player in game:GetService("Players"):GetPlayers() do
+		local char = player.Character
+		local hrp = char and char:FindFirstChild("HumanoidRootPart")
+		if hrp then
+			local pos = typeof(root) == "CFrame" and root.Position or root.Position
+			if (hrp.Position - pos).Magnitude <= radius then
+				func(player, ...)
+			end
+		end
+	end
+end
+
+local function looper(func, times, delay, ...)
+	local args = {...}
+	for _ = 1, times do
+		func(table.unpack(args))
+		task.wait(delay)
+	end
+end
+
+local function clear_forces(part)
+	for _, v in ipairs(part:GetDescendants()) do
+		if v:IsA("BodyVelocity") or v:IsA("BodyPosition") or v:IsA("LinearVelocity") then
+			v:Destroy()
+		end
+	end
+end
+
+
+function checkifnearwall(direction)
+	local Raycast = Ray.new(root.Position,direction)
+	local Result = workspace:FindPartOnRayWithIgnoreList(Raycast,{character})
+	if Result then
+		return true
+	else
+		return false
+	end
+end
+
+local stuns = {}
+local function stun(hum: Humanoid, t: number)
+	if not t or t <= 0 then
+		return
+	end
+	coroutine.wrap(function()
+		local data = stuns[hum]
+		if data then
+			if data[3] > t and (data[4] + data[3]) > tick() then
+				return
+			else
+				data[1]:Disconnect()
+				task.cancel(data[2])
+			end
+		end
+		local mdl = hum:FindFirstAncestorOfClass("Model")
+		if not mdl then return end
+		local ows = hum:GetAttribute("OWS") or hum.WalkSpeed
+		local ojh = hum:GetAttribute("OJH") or hum.JumpHeight
+		hum:SetAttribute("OWS", ows)
+		hum:SetAttribute("OJH", ojh)
+		hum.WalkSpeed = 0
+		hum.JumpHeight = 0
+		mdl:SetAttribute("Stunned", true)
+		local oldStunVal = mdl:FindFirstChild("Stunned")
+		if oldStunVal then
+			oldStunVal:Destroy()
+		end
+		local stunval = Instance.new("BoolValue")
+		stunval.Name = "Stunned"
+		stunval.Parent = mdl
+		local cnt = mdl.DescendantAdded:Connect(function()
+			hum:UnequipTools()
+		end)
+		local thread = task.delay(t, function()
+			hum.WalkSpeed = ows
+			hum.JumpHeight = ojh
+			mdl:SetAttribute("Stunned", false)
+			if stunval and stunval.Parent then
+				stunval:Destroy()
+			end
+			if stuns[hum] then
+				stuns[hum][1]:Disconnect()
+				stuns[hum] = nil
+			end
+		end)
+		stuns[hum] = {cnt, thread, t, tick()}
+	end)()
+end
+
+local function lowest(origin)
+	local rayOrigin, rayDirection
+
+	if typeof(origin) == "Instance" and origin:IsA("BasePart") then
+		rayOrigin = origin.Position
+		rayDirection = -origin.CFrame.UpVector * 1000
+	elseif typeof(origin) == "CFrame" then
+		rayOrigin = origin.Position
+		rayDirection = -origin.UpVector * 1000
+	else
+		warn("lowest: Invalid argument, expected BasePart or CFrame")
+		return nil
+	end
+
+	local raycastParams = RaycastParams.new()
+	raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+	raycastParams.FilterDescendantsInstances = { script, character }
+	raycastParams.IgnoreWater = true
+
+	local result = workspace:Raycast(rayOrigin, rayDirection, raycastParams)
+	if result then
+		return CFrame.new(result.Position)
+	else
+		return CFrame.new(rayOrigin)
+	end
+end
+
+local ts = game:GetService("TweenService")
+local rnd = Random.new()
+
+local function nn(min, max, isInt)
+	if min >= max then return min end
+	return isInt and rnd:NextInteger(min, max) or rnd:NextNumber(min, max)
+end
+
+
+local function t(template, size, cframe, parent)
+	local part = template:Clone()
+	part.Size = size
+	part.CFrame = cframe
+	part.Parent = parent
+	return part
+end
+
+local function crater(args)
+	assert(args.Origin, "NO ORIGIN STUPID")
+
+	local orig = typeof(args.Origin) == "Instance" and args.Origin.CFrame or args.Origin
+	orig *= (args.Offset or CFrame.new())
+
+	local amt = args.Amount or 30
+	if amt <= 0 then return end
+
+	local life = args.Lifetime or 3
+	local radius = args.Radius or 20
+	local size = args.Size or Vector3.one * 2
+	local randomness = args.Influence or 0.5
+
+	local angleStep = 360 / amt
+	local angle = 0
+
+	local filter = {script, character}
+	if args.Exclude then table.insert(filter, args.Exclude) end
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = filter
+
+	local rocks = Instance.new("Model")
+	rocks.Name = "Rocks"
+	rocks.Parent = workspace
+
+	if args.AttachTo then
+		args.BypassDuration = true
+		args.AttachTo.Destroying:Connect(function()
+			rocks:Destroy()
+		end)
+	end
+
+	if not args.BypassDuration then
+		task.delay(life + 0.5, function()
+			if rocks then rocks:Destroy() end
+		end)
+	end
+
+	for i = 0, amt do
+		local angleRad = math.rad(angle)
+		local randOffset = Vector3.new(
+			nn(-randomness, randomness),
+			0,
+			nn(-randomness, randomness)
+		) * radius * 0.5
+
+		local offset1 = CFrame.Angles(0, angleRad, 0) * CFrame.new(radius * 0.8, 10, 0) + randOffset
+		local offset2 = CFrame.Angles(0, angleRad, 0) * CFrame.new(radius * 0.4, 10, 0) + randOffset
+
+		local ray2 = (orig * offset1).Position
+		local ra1 = (orig * offset2).Position
+
+		local r1 = workspace:Raycast(ray2, Vector3.yAxis * -20, params)
+		local r2 = workspace:Raycast(ra1, Vector3.yAxis * -20, params)
+
+		if r1 and r2 then
+			local basePart = Instance.new("Part")
+			basePart.Anchored = true
+			basePart.CanCollide = false
+			basePart.CanQuery = false
+			basePart.CanTouch = false
+			basePart.Material = r1.Material
+			basePart.Color = r1.Instance.Color
+			basePart.TopSurface = Enum.SurfaceType.Smooth
+			basePart.BottomSurface = Enum.SurfaceType.Smooth
+
+			for _, tex in pairs(r1.Instance:GetChildren()) do
+				if tex:IsA("Texture") then
+					for _, face in pairs(Enum.NormalId:GetEnumItems()) do
+						local cloned = tex:Clone()
+						cloned.Face = face
+						cloned.Parent = basePart
+					end
+				end
+			end
+
+			local rockSize = Vector3.new(size.X * 1.3, size.Y / 1.4, size.Z * 1.3) * nn(1, 1.5)
+			local rockCFrame = CFrame.new(r1.Position - Vector3.yAxis / 2, orig.Position) *
+				CFrame.Angles(nn(-.25, .5), nn(-.25, .25), nn(-.25, .25))
+			t(basePart, rockSize, rockCFrame, rocks)
+
+			local stoneSize = Vector3.new(rockSize.X * 1.01, rockSize.Y * .25, rockSize.Z * 1.01)
+			local stoneCFrame = rockCFrame * CFrame.new(0, rockSize.Y / 2 - stoneSize.Y / 2.1, 0)
+			t(basePart, stoneSize, stoneCFrame, rocks)
+
+			local rubbleCFrame = CFrame.new(r2.Position - (Vector3.yAxis * size * 0.4), orig.Position) *
+				CFrame.Angles(nn(-1, -.3), nn(-.15, .15), nn(-.15, .15))
+			local rubbleSize = rockSize * nn(0.85, 1.15)
+			t(basePart, rubbleSize, rubbleCFrame, rocks)
+
+			local pebbleCFrame = rubbleCFrame * CFrame.new(0, rubbleSize.Y / 2 - stoneSize.Y / 2.1, 0)
+			t(basePart, stoneSize, pebbleCFrame, rocks)
+		end
+
+		angle += angleStep
+	end
+
+	if not args.BypassDuration then
+		task.delay(life, function()
+			for _, v in pairs(rocks:GetChildren()) do
+				ts:Create(v, TweenInfo.new(1), {
+					Size = Vector3.zero,
+					Position = v.Position - Vector3.yAxis * (v.Size.Y + 2)
+				}):Play()
+			end
+		end)
+	end
+end
+
+
+local function ragdoll(c, t)
+	local ps = game:GetService("PhysicsService")
+
+	if not ps:IsCollisionGroupRegistered("Players") then
+		ps:RegisterCollisionGroup("Players")
+	end
+
+	if not ps:IsCollisionGroupRegistered("Collider") then
+		ps:RegisterCollisionGroup("Collider")
+	end
+
+	ps:CollisionGroupSetCollidable("Players", "Collider", false)
+
+	local hum = c:FindFirstChildOfClass("Humanoid")
+	local hrp = c:FindFirstChild("HumanoidRootPart") or c:FindFirstChild("Torso")
+
+	if not hrp or not hum then
+		return
+	end
+
+	local existingCollider = c:FindFirstChild("ColliderFolder")
+	if existingCollider then
+		local existingTimer = existingCollider:FindFirstChild("RagdollTimer")
+		if existingTimer then
+			existingTimer.Value = existingTimer.Value + 5
+		end
+		return
+	end
+
+	local cs = Instance.new("Folder", c)
+	cs.Name = "ColliderFolder"
+
+	local ragdollTimer = Instance.new("NumberValue")
+	ragdollTimer.Name = "RagdollTimer"
+	ragdollTimer.Value = t or 5
+	ragdollTimer.Parent = cs
+
+	local old = hum.RequiresNeck
+
+	hum.PlatformStand = true
+	hum.RequiresNeck = false
+	hum.BreakJointsOnDeath = false
+
+	local ragdollParts = {}
+
+	for _, v in pairs(c:GetDescendants()) do
+		if v:IsA("Motor6D") and v.Name ~= "RootJoint" and v.Name ~= "Root" then
+			local part0, part1 = v.Part0, v.Part1
+			if not part0 or not part1 then continue end
+
+			local bcs = Instance.new("BallSocketConstraint", part0)
+			bcs.Name = "RagdollSocket"
+			part1.CanCollide = false
+			part0.CanCollide = false
+			part1.CollisionGroup = "Players"
+
+			local fake = Instance.new("Part", cs)
+			fake.Transparency = 1
+			fake.Massless = true
+			fake.CanCollide = false
+			fake.Name = part1.Name
+			fake.Size = part1.Size / 2
+			fake.CFrame = part1.CFrame
+			fake.CollisionGroup = "Collider"
+
+			local w = Instance.new("WeldConstraint", fake)
+			w.Part0 = part1
+			w.Part1 = fake
+
+			local a1 = Instance.new("Attachment", part0)
+			a1.Name = "RagdollAttachment"
+			local a2 = Instance.new("Attachment", part1)
+			a2.Name = "RagdollAttachment"
+
+			a2.Position = v.C1.Position
+			a1.WorldPosition = a2.WorldPosition
+
+			bcs.LimitsEnabled = true
+			bcs.TwistLimitsEnabled = true
+
+			bcs.Attachment0 = a1
+			bcs.Attachment1 = a2
+
+			table.insert(ragdollParts, { bcs, fake, a1, a2, w, v })
+			
+			if v.Name == "Neck" or v.Part0 == hrp or v.Part1 == hrp then
+				local torsoWeld = Instance.new("WeldConstraint", hrp)
+				torsoWeld.Part0 = hrp
+				torsoWeld.Part1 = (hrp == v.Part1 and v.Part0 or v.Part1)
+				table.insert(ragdollParts, { torsoWeld })
+			else
+				v.Enabled = false
+				fake.CanCollide = true
+			end
+		end
+	end
+
+	task.spawn(function()
+		while ragdollTimer and ragdollTimer.Value > 0 do
+			task.wait(1)
+			ragdollTimer.Value = ragdollTimer.Value - 1
+		end
+
+		if cs.Parent then
+			hum.RequiresNeck = old
+			hum.PlatformStand = false
+
+			for _, data in pairs(ragdollParts) do
+				local bcs, fake, a1, a2, w, motor = unpack(data)
+				if motor then motor.Enabled = true end
+				if bcs then bcs:Destroy() end
+				if fake then fake:Destroy() end
+				if a1 then a1:Destroy() end
+				if a2 then a2:Destroy() end
+				if w then w:Destroy() end
+			end
+
+			cs:Destroy()
+		end
+	end)
+end
+
+local cooldowns = {}
+local cooldownTimes = { rush = 3 }
+
+client.OnServerEvent:Connect(function(plr, data)
+	if plr ~= player or character:GetAttribute("Stunned") then return "Do NOT tamper...." end
+	if cooldowns[data] and tick() < cooldowns[data] then return end
+
+	cooldowns[data] = tick() + (cooldownTimes[data] or 0)
+
+	if data == "rush" then
+		debounce = true
+		humanoid.WalkSpeed = 0
+		local rushbegin = animator.new()
+		rushbegin:setAnimation(require(animations.one))
+		rushbegin:setRig(character)
+		rushbegin:AdjustWeight(1)
+		rushbegin.lerpFactor = .3
+		rushbegin.Looped = false
+		rushbegin:Play()
+		local imrushingyou = animator.new()
+		imrushingyou:setAnimation(require(animations.rushrun))
+		imrushingyou:setRig(character)
+		imrushingyou:AdjustWeight(1)
+		imrushingyou.lerpFactor = .3
+		imrushingyou.Looped = false
+		rushbegin:GetMarkerReachedSignal("CursedArm"):Wait()
+		client_fx(root, 150, brightness, Color3.fromRGB(0, 255, 0), .1, .3)
+		local arms = Instance.new("Sound")
+		arms.Name = "idk lol"
+		arms.Volume = 10
+		arms.SoundId = "rbxassetid://81606316275194"
+		arms.Parent = root
+		arms:Play()
+		local arms2 = Instance.new("Sound")
+		arms2.Name = "idk lol"
+		arms2.Volume = 10
+		arms2.SoundId = "rbxassetid://9125647528"
+		arms2.Parent = root
+		arms2:Play()
+		local voice = Instance.new("Sound")
+		voice.Name = "idk lol"
+		voice.Volume = 10
+		voice.SoundId = "rbxassetid://120458587618994"
+		voice.Parent = root
+		voice:Play()
+		for _,v in pairs(rightarm:GetDescendants()) do
+			if v:IsA("ParticleEmitter") then
+
+				v.Enabled = true
+			end
+		end
+		for _,v in pairs(left_arm:GetDescendants()) do
+			if v:IsA("ParticleEmitter") then
+				v.Enabled = true
+			end
+		end
+		task.wait(0.4)
+		local shuffle = Instance.new("Sound")
+		shuffle.Name = "idk lol"
+		shuffle.Volume = 10
+		shuffle.SoundId = "rbxassetid://3929467229"
+		shuffle.Parent = root
+		shuffle:Play()
+		rushbegin:GetMarkerReachedSignal("Run"):Wait()
+		imrushingyou:Play()
+		CombatFunctions.DynamicBoost({
+			Part = root,
+			Humanoid = humanoid,
+			Direction = root.CFrame.LookVector,
+			Speed = 100,
+			Duration = 100,
+		})
+		local hitsomeone = false
+		local hitbox2 = hitboxes.CreateHitbox()
+		hitbox2.Size = Vector3.new(10,10,10)
+		hitbox2.CFrame = root
+		hitbox2.Offset = CFrame.new(0, 0, -5)
+		hitbox2.VelocityPrediction = true
+		hitbox2.VelocityPredictionTime = 0
+		local params = OverlapParams.new()
+		params.FilterType = Enum.RaycastFilterType.Exclude
+		params.FilterDescendantsInstances = {character:GetChildren()}
+		hitbox2.OverlapParams = params
+		hitbox2.Touched:Connect(function(hit)
+			if hitsomeone then return end
+			local hit_character = hit.Parent
+			if not hit_character then return end
+
+			local hum = hit_character:FindFirstChildOfClass("Humanoid")
+			if not hum or hum.Health <= 0 then return end
+
+			local torso = hit_character:FindFirstChild("Torso") or hit_character:FindFirstChild("UpperTorso")
+			if not torso then return end
+
+			local leg = hit_character:FindFirstChild("Left Leg") or hit_character:FindFirstChild("Right Leg")
+			for _, v in ipairs(root:GetChildren()) do
+				if v:IsA("LinearVelocity") or v:IsA("BodyPosition") or v:IsA("BodyVelocity") then
+					v:Destroy()
+				end
+			end
+			hitsomeone = true
+			hitbox2:Destroy()
+			imrushingyou:Stop()
+			humanoid.WalkSpeed = 0
+
+			local uppercut = animator.new()
+			uppercut:setAnimation(require(animations.four))
+			uppercut:setRig(character)
+			uppercut:AdjustWeight(2)
+			uppercut.lerpFactor = 0.3
+			uppercut.Looped = false
+			uppercut:Play(0.8)
+			uppercut:GetMarkerReachedSignal("Attack"):Wait()
+			task.spawn(function()
+				CameraShake({
+					FadeIn = 0,
+					Magnitude = 50,
+					Roughness = 5,
+					FadeOut = 0.5,
+					posInfluence = Vector3.zero,
+					rotInfluence = Vector3.new(.75,.75,.75),
+				},8.5)
+				remotefunction:InvokeClient(player, {
+					action = "FOV",
+					Settings = {
+						target = 50,
+						duration = 0,
+					}
+				})
+				remotefunction:InvokeClient(player, {
+					action = "FOV",
+					Settings = {
+						target = 70,
+						duration = 1,
+						style = Enum.EasingStyle.Sine
+					}
+				})
+			end)
+			local hit_effect = assets.Effects.HeavyHit.Attachment:Clone()
+			hit_effect.Parent = torso
+			for _, v in ipairs(hit_effect:GetDescendants()) do
+				if v:IsA("ParticleEmitter") then
+					v:Emit(v:GetAttribute("EmitCount") or 1)
+				end
+			end
+
+			local lunge = Instance.new("Sound")
+			lunge.Name = "gg"
+			lunge.Volume = 10
+			lunge.PlaybackSpeed = 0.8
+			lunge.SoundId = "rbxassetid://109646850478379"
+			lunge.Parent = root
+			lunge:Play()
+			local windithbink = Instance.new("Sound")
+			windithbink.Name = "gg"
+			windithbink.Volume = 10
+			windithbink.PlaybackSpeed = 0.9
+			windithbink.SoundId = "rbxassetid://137532747919865"
+			windithbink.Parent = root
+			windithbink:Play()
+
+			client_fx(root, 150, brightness, Color3.fromRGB(0, 255, 0), 0.1, 0.3)
+
+			hum:TakeDamage(100)
+			stun(hum, 0.8)
+			ragdoll(hit_character, 5)
+
+			torso.CFrame = CFrame.lookAt(torso.Position, root.Position)
+
+			CombatFunctions.KnockbackFromAttacker(character, hit_character, {
+				Duration = 1,
+				Force = 200,
+				Direction = CombatFunctions.GetBoostDirection(root, "forwardup"),
+			})
+			task.wait(0.5)
+			coroutine.wrap(crater)({
+				Radius = 40,
+				Amount = 20,
+				Size = Vector3.one * 2,
+				Influence = 0.2,
+				Origin = lowest(root.CFrame),
+			})
+			humanoid.Jump = true
+			CombatFunctions.Boost({
+				Part = root,
+				Method = "DashToTarget",
+				Target = hit_character,
+				Duration = 0.32,
+			})
+			local tp_sound = Instance.new("Sound")
+			tp_sound.SoundId = "rbxassetid://111294572387894"
+			tp_sound.Volume = 10
+			tp_sound.Parent = root
+			tp_sound:Play()
+			local slam = animator.new()
+			slam:setAnimation(require(animations.five))
+			slam:setRig(character)
+			slam:AdjustWeight(2)
+			slam.lerpFactor = 0.3
+			slam.Looped = false
+			slam:Play()
+			slam:GetMarkerReachedSignal("Punch"):Wait()
+			local fall_attach1 = Instance.new("Attachment")
+			fall_attach1.Name = "TrailAttach1"
+			fall_attach1.Parent = root
+			fall_attach1.Position = Vector3.new(0, 0, -1)
+
+			local fall_attach2 = Instance.new("Attachment")
+			fall_attach2.Name = "TrailAttach2"
+			fall_attach2.Parent = root
+			fall_attach2.Position = Vector3.new(0, 0, 1)
+
+			local red = Instance.new("Trail")
+			red.Name = "RedTrail"
+			red.Attachment0 = fall_attach1
+			red.Attachment1 = fall_attach2
+			red.Color = ColorSequence.new(Color3.new(1, 1, 1))
+			red.WidthScale = NumberSequence.new({
+				NumberSequenceKeypoint.new(0, 1),
+				NumberSequenceKeypoint.new(1, 0.35)
+			})
+			red.Transparency = NumberSequence.new({
+				NumberSequenceKeypoint.new(0, 0),
+				NumberSequenceKeypoint.new(1, 1)
+			})
+			red.Lifetime = 0.25
+			red.LightEmission = 1
+			red.Brightness = 10
+			red.Parent = root
+			task.delay(0.4, function()
+				local falling = animator.new()
+				falling:setAnimation(require(animations.fall))
+				falling:setRig(character)
+				falling:AdjustWeight(2)
+				falling.lerpFactor = 0.3
+				falling.Looped = false
+				falling:Play()
+				falling.Stall = 0.5
+
+				task.spawn(function()
+					while falling.TimePosition < 0.35 do
+						task.wait()
+					end
+					falling:AdjustSpeed(0)
+				end)
+
+				remotefunction:InvokeClient(player, {
+					action = "Gravity",
+					Settings = {
+						gravity = 1000,
+						duration = 0.7,
+						revertoncomplete = true,
+					}
+				})
+				
+
+				task.spawn(function()
+					local hrp = root
+					local rayParams = RaycastParams.new()
+					rayParams.FilterDescendantsInstances = {character}
+					rayParams.FilterType = Enum.RaycastFilterType.Exclude
+
+					while hrp and hrp.Parent do
+						local rayOrigin = hrp.Position
+						local rayDirection = Vector3.new(0, -15, 0)
+						local result = workspace:Raycast(rayOrigin, rayDirection, rayParams)
+
+						if result then
+							break
+						end
+
+						task.wait()
+					end
+
+					if falling and falling.IsPlaying then
+						falling:AdjustSpeed(1)
+						CombatFunctions.Boost({ Part = root, Method = "AssemblyLinearVelocity", Direction = CombatFunctions.GetBoostDirection(root, "down"), Distance = 0.001, Duration = 1.5 })
+					end
+				end)
+			end)
+
+			--[[local slam_sound = Instance.new("Sound")
+			slam_sound.SoundId = "rbxassetid://4510633313"
+			slam_sound.Volume = 10
+			slam_sound.Parent = root
+			slam_sound:Play()]]
+
+
+			CombatFunctions.KnockbackFromAttacker(character, hit_character, {
+				Duration = 0.1,
+				Force = 650,
+				Direction = CombatFunctions.GetBoostDirection(root, "forwarddown"),
+			})
+			local lunge = Instance.new("Sound")
+			lunge.Name = "gg"
+			lunge.Volume = 10
+			lunge.SoundId = "rbxassetid://72585212160838"
+			lunge.Parent = root
+			lunge:Play()
+			local windithbink = Instance.new("Sound")
+			windithbink.Name = "gg"
+			windithbink.Volume = 10
+			windithbink.PlaybackSpeed = 0.7
+			windithbink.SoundId = "rbxassetid://5244550142"
+			windithbink.Parent = root
+			windithbink:Play()
+			local stateConn, floorConn
+			local knockdown = Instance.new("Sound")
+			knockdown.SoundId = "rbxassetid://6906973625"
+			knockdown.Volume = 10
+			knockdown.Parent = torso
+			knockdown:Play()
+			local function isCharacterPart(part)
+				local model = part and part:FindFirstAncestorWhichIsA("Model")
+				if model then
+					return model:FindFirstChildOfClass("Humanoid") ~= nil
+				end
+				return false
+			end
+			local aoe_triggered = false
+			local aoe_triggered2 = false
+
+			local function triggerAOE()
+				if aoe_triggered then return end
+				aoe_triggered = true
+
+				local aoe_effect = assets.Effects.groundSlam:Clone()
+				aoe_effect.Parent = storage
+				aoe_effect.Position = torso.Position
+
+				task.delay(3, function()
+					aoe_effect:Destroy()
+				end)
+				for _, v in ipairs(aoe_effect:GetDescendants()) do
+					if v:IsA("ParticleEmitter") then
+						task.wait()
+						v:Emit(v:GetAttribute("EmitCount") or 1)
+					end
+				end
+				coroutine.wrap(crater)({
+					Radius = 40,
+					Amount = 10,
+					Size = Vector3.one * 5,
+					Influence = 0.2,
+					Origin = lowest(torso.CFrame),
+				})
+				local aoe_sound = Instance.new("Sound")
+				aoe_sound.SoundId = "rbxassetid://100001645035103"
+				aoe_sound.Volume = 10
+				aoe_sound.Parent = torso
+				aoe_sound:Play()
+				local aoe_sound2 = Instance.new("Sound")
+				aoe_sound2.SoundId = "rbxassetid://97522871949213"
+				aoe_sound2.Volume = 10
+				aoe_sound2.Parent = torso
+				aoe_sound2:Play()
+				CombatFunctions.KnockbackFromAttacker(character, hit_character, {
+					Duration = 0.1,
+					Force = 150,
+					Direction = CombatFunctions.GetBoostDirection(torso, "forwardup"),
+				})
+				--client_fx(torso, 150, cam_shake, {5, 30, -5, 10}, Vector3.one * 10)
+			end
+			
+			local function triggerAOE2()
+				if aoe_triggered2 then return end
+				aoe_triggered2 = true
+				
+				local aoe_effect = assets.Effects.groundSlam:Clone()
+				aoe_effect.Parent = storage
+				aoe_effect.CFrame = lowest(root.CFrame)
+				task.spawn(function()
+					CameraShake({
+						FadeIn = 0,
+						Magnitude = 50,
+						Roughness = 5,
+						FadeOut = 2,
+						posInfluence = Vector3.zero,
+						rotInfluence = Vector3.new(.75,.75,.75),
+					},8.5)
+				end)
+				client_fx(root, 150, impact, 1)
+				task.delay(3, function()
+					aoe_effect:Destroy()
+				end)
+				for _, v in ipairs(aoe_effect:GetDescendants()) do
+					if v:IsA("ParticleEmitter") then
+						task.wait()
+						v:Emit(v:GetAttribute("EmitCount") or 1)
+					end
+				end
+				coroutine.wrap(crater)({
+					Radius = 40,
+					Amount = 15,
+					Size = Vector3.one * 7,
+					Influence = 0.5,
+					Origin = lowest(root.CFrame),
+				})
+				root.CFrame = lowest(root.CFrame)
+				fall_attach1:Destroy()
+				fall_attach2:Destroy()
+				red:Destroy()
+				task.spawn(function()
+					local shockwave = meshes.FlatBurst2:Clone()
+					shockwave.Parent = storage
+					shockwave.CFrame = root.CFrame * CFrame.new(0, 0.5, 0) * CFrame.Angles(0, math.rad(90), 0)
+					local shockwave2 = meshes.CircularWind3:Clone()
+					shockwave2.Parent = storage
+					shockwave2.CFrame = root.CFrame * CFrame.new(0, 0.5, 0) * CFrame.Angles(0, math.rad(90), 0)
+
+
+					local tween = game:GetService("TweenService"):Create(
+						shockwave,
+						TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+						{ Size = Vector3.new(200, 2, 200), Transparency = 1 }
+					)
+					local tween2 = game:GetService("TweenService"):Create(
+						shockwave2,
+						TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+						{ Transparency = 1, Size = Vector3.new(200, 2, 200) }
+					)
+					tween:Play()
+					tween2:Play()
+				end)
+				local aoe_sound = Instance.new("Sound")
+				aoe_sound.SoundId = "rbxassetid://111294572387894"
+				aoe_sound.Volume = 10
+				aoe_sound.Parent = root
+				aoe_sound:Play()
+				local aoe_sound2 = Instance.new("Sound")
+				aoe_sound2.SoundId = "rbxassetid://17323220462"
+				aoe_sound2.Volume = 10
+				aoe_sound2.Parent = root
+				aoe_sound2:Play()
+				CombatFunctions.Boost({ Part = root, Method = "AssemblyLinearVelocity", Direction = CombatFunctions.GetBoostDirection(root, "down"), Distance = 0.001, Duration = 1.5 })
+				remotefunction:InvokeClient(player, {
+					action = "FOV",
+					Settings = {
+						target = 30,
+						duration = 0,
+					}
+				})
+				remotefunction:InvokeClient(player, {
+					action = "FOV",
+					Settings = {
+						target = 70,
+						duration = 1,
+						style = Enum.EasingStyle.Sine
+					}
+				})
+			end
+			for _, part in ipairs(hit_character:GetDescendants()) do
+				if part:IsA("BasePart") then
+					part.Touched:Connect(function(hit)
+						if isCharacterPart(hit) then
+							return
+						end
+						if hit:IsA("BasePart") and hit.CanCollide and not hit:IsDescendantOf(hit_character) then
+							triggerAOE()
+						end
+					end)
+				end
+			end
+			for _, part in ipairs(character:GetDescendants()) do
+				if part:IsA("BasePart") then
+					part.Touched:Connect(function(hit)
+						if isCharacterPart(hit) then
+							return
+						end
+						if hit:IsA("BasePart") and hit.CanCollide and not hit:IsDescendantOf(character) then
+							triggerAOE2()
+						end
+					end)
+				end
+			end
+		end)
+
+		hitbox2:Start()
+		for _,v in pairs(rightarm:GetDescendants()) do
+			if v:IsA("ParticleEmitter") then
+				v.Enabled = false
+			end
+		end
+		for _,v in pairs(left_arm:GetDescendants()) do
+			if v:IsA("ParticleEmitter") then
+				v.Enabled = false
+			end
+		end
+		for i = 1, 20 do
+			local runsound = Instance.new("Sound")
+			runsound.Name = "stepping"
+			runsound.Volume = 10
+			runsound.SoundId = "rbxassetid://2599401908"
+			runsound.Parent = root
+			runsound:Play()
+			task.wait(0.15)
+			if hitsomeone then break end
+			--runsound:Stop()
+		end
+		if not hitsomeone then
+			hitbox2:Stop()
+			humanoid.WalkSpeed = 16
+			for _, v in ipairs(root:GetChildren()) do
+				if v:IsA("LinearVelocity") or v:IsA("BodyPosition") or v:IsA("BodyVelocity") then
+					v:Destroy()
+				end
+			end
+		end        
+		debounce = false
+		humanoid.WalkSpeed = 16
+		for _, v in ipairs(root:GetChildren()) do
+			if v:IsA("LinearVelocity") or v:IsA("BodyPosition") or v:IsA("BodyVelocity") then
+				v:Destroy()
+			end
+		end
+	elseif data == "barrage" then
+		debounce = true
+		local barrage = animator.new()
+		barrage:setAnimation(require(animations.Barrage))
+		barrage:setRig(character)
+		barrage:AdjustWeight(1)
+		barrage.lerpFactor = .3
+		barrage.Looped = false
+		barrage:Play()
+		task.wait(0.4)
+		local barrage_effects = assets.Effects.barrage:Clone()
+		barrage_effects.Parent = storage
+		barrage_effects.barrage.Part0 = root
+		for _,v in pairs(barrage_effects:GetDescendants()) do
+			if v:IsA("ParticleEmitter") then
+				v.Enabled = true
+			end
+		end
+		for i = 1,25 do
+			task.wait(0.01)
+			local hitbox2 = hitboxes.CreateHitbox()
+			hitbox2.Size = Vector3.new(5,5,30)
+			hitbox2.CFrame = root.CFrame * CFrame.new(0, 0, -20)
+			local params = OverlapParams.new()
+			params.FilterType = Enum.RaycastFilterType.Exclude
+			params.FilterDescendantsInstances = {character:GetChildren()}
+			hitbox2.OverlapParams = params
+			hitbox2.Touched:Connect(function(hit, hum)
+				local hit_character = hit.Parent
+				if not hit_character then return end
+				local hum = hit_character:FindFirstChildOfClass("Humanoid")
+				if not hum or hum.Health <= 0 then return end
+				local torso = hit_character:FindFirstChild("Torso") or hit_character:FindFirstChild("UpperTorso") or hit_character:FindFirstChild("HumanoidRootPart")
+				if not torso then return end
+				local hitsounds = {
+					"rbxassetid://2599401908",
+					"rbxassetid://114831997887849",
+					"rbxassetid://84444135405978",
+					"rbxassetid://134834021127470",
+					"rbxassetid://84130024107303",
+					"rbxassetid://88848225138172",
+				}
+				local hitsound = Instance.new("Sound")
+				hitsound.SoundId = hitsounds[math.random(1, #hitsounds)]
+				hitsound.Parent = torso
+				hitsound:Play()
+				hum:TakeDamage(45)
+				stun(hum, 0.8)
+				CombatFunctions.KnockbackFromAttacker(character, hit_character, {
+					Duration = 0.1,
+					Force = 10,
+					Direction = (torso.Position - root.Position).Unit,
+				})
+			end)
+			hitbox2:Start()
+			task.wait(0.1)
+			hitbox2:Stop()
+			if i == 25 then
+				local hitbox2 = hitboxes.CreateHitbox()
+				hitbox2.Size = Vector3.new(5,5,100)
+				hitbox2.CFrame = root.CFrame * CFrame.new(0, 0, -20)
+				local params = OverlapParams.new()
+				params.FilterType = Enum.RaycastFilterType.Exclude
+				params.FilterDescendantsInstances = {character:GetChildren()}
+				hitbox2.OverlapParams = params
+				hitbox2.Touched:Connect(function(hit, hum)
+					local hit_character = hit.Parent
+					if not hit_character then return end
+					local hum = hit_character:FindFirstChildOfClass("Humanoid")
+					if not hum or hum.Health <= 0 then return end
+					local torso = hit_character:FindFirstChild("Torso") or hit_character:FindFirstChild("UpperTorso") or hit_character:FindFirstChild("HumanoidRootPart")
+					if not torso then return end
+					local hit_effect = assets.Effects.HeavyHit.Attachment:Clone()
+					hit_effect.Parent = torso
+					for _, v in ipairs(hit_effect:GetDescendants()) do
+						if v:IsA("ParticleEmitter") then
+							v:Emit(v:GetAttribute("EmitCount") or 1)
+						end
+					end
+					local heavyhit = Instance.new("Sound")
+					heavyhit.Name = "stepping"
+					heavyhit.Volume = 4
+					heavyhit.SoundId = "rbxassetid://86699600703335"
+					heavyhit.Parent = root
+					heavyhit:Play()
+					hum:TakeDamage(5)
+					stun(hum, 0.8)
+					CombatFunctions.KnockbackFromAttacker(character, hit_character, {
+						Duration = 0.1,
+						Force = 60,
+						Direction = (torso.Position - root.Position).Unit,
+					})
+				end)
+				hitbox2:Start()
+				task.wait(0.1)
+				hitbox2:Stop()
+				for _,v in pairs(barrage_effects:GetDescendants()) do
+					if v:IsA("ParticleEmitter") then
+						v.Enabled = false
+					end
+					task.delay(1, function()
+						barrage_effects:Destroy()
+					end)
+				end
+			end
+		end
+	elseif data == "door" then
+		local door = assets.Effects.door:Clone()
+		door.Parent = workspace
+		door:PivotTo(root.CFrame * CFrame.new(0, 0, -10))
+		for _, side in ipairs(door:GetChildren()) do
+			if side.Name == "left" or side.Name == "right" then
+				for _, part in ipairs(side:GetChildren()) do
+					if part:IsA("BasePart") then
+						game:GetService("TweenService")
+							:Create(part, TweenInfo.new(0.5), { Transparency = 0 })
+							:Play()
+					end
+				end
+			end
+		end
+		local door_player = animator.new()
+		door_player:setAnimation(require(animations.d))
+		door_player:setRig(character)
+		door_player:AdjustWeight(1)
+		door_player.lerpFactor = .3
+		door_player.Looped = false
+		door_player:Play()
+
+		local door_object = animator.new()
+		door_object:setAnimation(require(animations.wow))
+		door_object:setRig(door)
+		door_object:AdjustWeight(1)
+		door_object.lerpFactor = .3
+		door_object.Looped = false
+		door_object:Play()
+
+		task.delay(0.6, function()
+			for _, descendant in ipairs(door:GetDescendants()) do
+				if descendant:IsA("ParticleEmitter") then
+					descendant:Emit(descendant:GetAttribute("EmitCount") or 1)
+				end
+			end
+			local closesound = Instance.new("Sound")
+			closesound.Name = "stepping"
+			closesound.Volume = 4
+			closesound.SoundId = "rbxassetid://118204907327984"
+			closesound.Parent = door.root
+			closesound:Play()
+
+			for _, side in ipairs(door:GetChildren()) do
+				if side.Name == "left" or side.Name == "right" then
+					for _, part in ipairs(side:GetChildren()) do
+						if part:IsA("BasePart") then
+							game:GetService("TweenService")
+								:Create(part, TweenInfo.new(0.5), { Transparency = 1 })
+								:Play()
+						end
+					end
+				end
+			end
+		end)
+
+		game:GetService("Debris"):AddItem(door, 3)
+	elseif data == "container" then
+		debounce = true
+		local barrage = animator.new()
+		barrage:setAnimation(require(animations.Throw))
+		barrage:setRig(character)
+		barrage:AdjustWeight(1)
+		barrage.lerpFactor = .3
+		barrage.Looped = false
+		barrage:Play()
+		task.wait(0.05)
+		local c1 = assets.Container:Clone()
+		local c2 = assets.Container2:Clone()
+		c1.Parent = character
+		c2.Parent = character
+		local v119 = Instance.new("Motor6D")
+		v119.Part0 = root
+		v119.Part1 = c1
+		v119.C0 = CFrame.new(0, -3, 0)
+		v119.Parent = c1
+		local v120 = Instance.new("Motor6D")
+		v120.Part0 = root
+		v120.Part1 = c2
+		v120.Parent = c1
+		local effect2 = assets.Effects.grow:Clone()
+		effect2.Parent = storage
+		effect2.CFrame = root.CFrame
+		for _,v in pairs(effect2:GetChildren()) do
+			if v:IsA("ParticleEmitter") then
+				task.wait()
+				v:Emit(v:GetAttribute("EmitCount") or 10)
+			end
+		end
+		task.wait(1)
+		c1:Destroy()
+		c2:Destroy()
+		local effect1 = assets.Effects.throw:Clone()
+		effect1.Parent = storage
+		effect1.CFrame = root.CFrame
+		for _,v in pairs(effect1:GetChildren()) do
+			if v:IsA("ParticleEmitter") then
+				task.wait()
+				v:Emit(v:GetAttribute("EmitCount") or 10)
+			end
+		end
+		local effect3 = assets.Effects.ContainerEffect:Clone()
+		effect3.Parent = storage
+		effect3.CFrame = root.CFrame
+		for _,v in pairs(effect3:GetDescendants()) do
+			if v:IsA("ParticleEmitter") then
+				task.wait()
+				v:Emit(v:GetAttribute("EmitCount") or 10)
+			end
+		end
+		local containerproj = assets.Containee:Clone()
+		containerproj.Parent = workspace
+		containerproj.CFrame = root.CFrame
+		CombatFunctions.Boost({ Part = containerproj, Method = "LinearVelocity", Direction = CombatFunctions.GetBoostDirection(containerproj, "forward"), Distance = 400, Duration = 1.5 })
+	elseif data == "mickeykick" then
+		local kick_start = animator.new()
+		kick_start:setAnimation(require(animations.mickeycharge))
+		kick_start:setRig(character)
+		kick_start:AdjustWeight(1)
+		kick_start.lerpFactor = .3
+		kick_start.Looped = false
+		kick_start:Play()
+		client_fx(root, 150, brightness, Color3.fromRGB(0, 255, 0), .1, .3)
+		CombatFunctions.DynamicBoost({
+			Part = root,
+			Humanoid = humanoid,
+			Direction = root.CFrame.LookVector,
+			Speed = 100,
+			Duration = 100,
+		})
+		local hitsomeone = false
+		local hitbox2 = hitboxes.CreateHitbox()
+		hitbox2.Size = Vector3.new(10,10,10)
+		hitbox2.CFrame = root
+		hitbox2.Offset = CFrame.new(0, 0, -5)
+		hitbox2.VelocityPrediction = true
+		hitbox2.VelocityPredictionTime = 0
+		local params = OverlapParams.new()
+		params.FilterType = Enum.RaycastFilterType.Exclude
+		params.FilterDescendantsInstances = {character:GetChildren()}
+		hitbox2.OverlapParams = params
+		hitbox2.Touched:Connect(function(hit)
+			if hitsomeone then return end
+			local hit_character = hit.Parent
+			if not hit_character then return end
+
+			local hum = hit_character:FindFirstChildOfClass("Humanoid")
+			if not hum or hum.Health <= 0 then return end
+
+			local torso = hit_character:FindFirstChild("Torso") or hit_character:FindFirstChild("UpperTorso")
+			if not torso then return end
+
+			local leg = hit_character:FindFirstChild("Left Leg") or hit_character:FindFirstChild("Right Leg")
+			for _, v in ipairs(root:GetChildren()) do
+				if v:IsA("LinearVelocity") or v:IsA("BodyPosition") or v:IsA("BodyVelocity") then
+					v:Destroy()
+				end
+			end
+
+			hitsomeone = true
+			hitbox2:Destroy()
+			local impact_sound = Instance.new("Sound")
+			impact_sound.SoundId = "rbxassetid://72585212160838"
+			impact_sound.Volume = 10
+			impact_sound.Parent = root
+			impact_sound:Play()
+			local uppercut = animator.new()
+			uppercut:setAnimation(require(animations.mickeylanded))
+			uppercut:setRig(character)
+			uppercut:AdjustWeight(2)
+			uppercut.lerpFactor = 0.3
+			uppercut.Looped = false
+			uppercut:Play(0.8)
+			--uppercut:GetMarkerReachedSignal("Attack"):Wait()
+
+			local hit_effect = assets.Effects.HeavyHit.Attachment:Clone()
+			hit_effect.Parent = torso
+			for _, v in ipairs(hit_effect:GetDescendants()) do
+				if v:IsA("ParticleEmitter") then
+					v:Emit(v:GetAttribute("EmitCount") or 1)
+				end
+			end
+
+			hum:TakeDamage(5)
+			stun(hum, 0.8)
+			--ragdoll(hit_character, 5)
+
+			torso.CFrame = CFrame.lookAt(torso.Position, root.Position)
+
+			CombatFunctions.KnockbackFromAttacker(character, hit_character, {
+				Duration = 0.5,
+				Force = 500,
+				Direction = CombatFunctions.GetBoostDirection(root, "forwardup"),
+			})
+			task.wait(0.5)
+			clear_forces(torso)
+			CombatFunctions.Boost({ Part = torso, Method = "AssemblyLinearVelocity", Direction = CombatFunctions.GetBoostDirection(torso, "down"), Distance = 0.001, Duration = 1.5 })
+			task.spawn(function()
+				local tp_sound = Instance.new("Sound")
+				tp_sound.SoundId = "rbxassetid://108688312097046"
+				tp_sound.Volume = 10
+				tp_sound.Parent = root
+				tp_sound:Play()
+				remotefunction:InvokeClient(player, {
+					action = "FOV",
+					Settings = {
+						target = 25,
+						duration = 0,
+					}
+				})
+				remotefunction:InvokeClient(player, {
+					action = "FOV",
+					Settings = {
+						target = 70,
+						duration = 0.5,
+						style = Enum.EasingStyle.Sine
+					}
+				})
+			end)
+			remotefunction:InvokeClient(player, {
+				action = "Attach",
+				Settings = {
+					host = character,
+					targetModel = hit_character,
+					target = "HumanoidRootPart",
+					offset = Vector3.new(0, 0, 7),
+					duration = 0.4,
+				}
+			})
+
+			local slam = animator.new()
+			slam:setAnimation(require(animations.mickeykick))
+			slam:setRig(character)
+			slam:AdjustWeight(2)
+			slam.lerpFactor = 0.3
+			slam.Looped = false
+			slam:Play()
+			slam:GetMarkerReachedSignal("Hit"):Wait()
+			task.wait(0.1)
+			task.spawn(function()
+				CameraShake({
+					FadeIn = 0,
+					Magnitude = 50,
+					Roughness = 15,
+					FadeOut = 2,
+					posInfluence = Vector3.zero,
+					rotInfluence = Vector3.new(.75,.75,.75),
+				},8.5)
+				remotefunction:InvokeClient(player, {
+					action = "FOV",
+					Settings = {
+						target = 25,
+						duration = 0,
+					}
+				})
+				remotefunction:InvokeClient(player, {
+					action = "FOV",
+					Settings = {
+						target = 70,
+						duration = 1,
+						style = Enum.EasingStyle.Sine
+					}
+				})
+			end)
+			local impact_sound2 = Instance.new("Sound")
+			impact_sound2.SoundId = "rbxassetid://120286886408374"
+			impact_sound2.Volume = 10
+			impact_sound2.Parent = root
+			impact_sound2:Play()
+			local slam_sound = Instance.new("Sound")
+			slam_sound.SoundId = "rbxassetid://100001645035103"
+			slam_sound.Volume = 10
+			slam_sound.Parent = root
+			slam_sound:Play()
+
+
+			CombatFunctions.KnockbackFromAttacker(character, hit_character, {
+				Duration = 0.1,
+				Force = 550,
+				Direction = CombatFunctions.GetBoostDirection(torso, "rightdown"),
+			})
+			local stateConn, floorConn
+			local function isCharacterPart(part)
+				local model = part and part:FindFirstAncestorWhichIsA("Model")
+				if model then
+					return model:FindFirstChildOfClass("Humanoid") ~= nil
+				end
+				return false
+			end
+			local aoe_triggered = false
+
+			local function triggerAOE()
+				if aoe_triggered then return end
+				aoe_triggered = true
+
+				local aoe_effect = assets.Effects.groundSlam:Clone()
+				aoe_effect.Parent = storage
+				aoe_effect.Position = torso.Position
+
+				task.delay(3, function()
+					aoe_effect:Destroy()
+				end)
+				for _, v in ipairs(aoe_effect:GetDescendants()) do
+					if v:IsA("ParticleEmitter") then
+						task.wait()
+						v:Emit(v:GetAttribute("EmitCount") or 1)
+					end
+				end
+				coroutine.wrap(crater)({
+					Radius = 40,
+					Amount = 10,
+					Size = Vector3.one * 5,
+					Influence = 0.2,
+					Origin = lowest(torso.CFrame),
+				})
+				--client_fx(torso, 150, cam_shake, {5, 30, -5, 10}, Vector3.one * 10)
+				local aoe_sound = Instance.new("Sound")
+				aoe_sound.SoundId = "rbxassetid://100001645035103"
+				aoe_sound.Volume = 10
+				aoe_sound.Parent = torso
+				aoe_sound:Play()
+				local aoe_sound2 = Instance.new("Sound")
+				aoe_sound2.SoundId = "rbxassetid://97522871949213"
+				aoe_sound2.Volume = 10
+				aoe_sound2.Parent = torso
+				aoe_sound2:Play()
+				CombatFunctions.KnockbackFromAttacker(character, hit_character, {
+					Duration = 0.1,
+					Force = 100,
+					Direction = CombatFunctions.GetBoostDirection(torso, "forwardup"),
+				})
+			end
+
+			for _, part in ipairs(hit_character:GetDescendants()) do
+				if part:IsA("BasePart") then
+					part.Touched:Connect(function(hit)
+						if isCharacterPart(hit) then
+							return
+						end
+						if hit:IsA("BasePart") and hit.CanCollide and not hit:IsDescendantOf(hit_character) then
+							triggerAOE()
+						end
+					end)
+				end
+			end
+		end)
+
+		hitbox2:Start()
+		for _,v in pairs(rightarm:GetDescendants()) do
+			if v:IsA("ParticleEmitter") then
+				v.Enabled = false
+			end
+		end
+		for _,v in pairs(left_arm:GetDescendants()) do
+			if v:IsA("ParticleEmitter") then
+				v.Enabled = false
+			end
+		end
+		task.wait(0.5)
+		if not hitsomeone then
+			hitbox2:Stop()
+			humanoid.WalkSpeed = 16
+			for _, v in ipairs(root:GetChildren()) do
+				if v:IsA("LinearVelocity") or v:IsA("BodyPosition") or v:IsA("BodyVelocity") then
+					v:Destroy()
+				end
+			end
+		end        
+		debounce = false
+		humanoid.WalkSpeed = 16
+		for _, v in ipairs(root:GetChildren()) do
+			if v:IsA("LinearVelocity") or v:IsA("BodyPosition") or v:IsA("BodyVelocity") then
+				v:Destroy()
+			end
+		end
+	end
+	
+end)
+
+NLS([[
+	local owner = game:GetService("Players").LocalPlayer
+local re = script.Parent
+local hum = owner.Character and owner.Character:FindFirstChildOfClass("Humanoid")
+local cam = workspace.CurrentCamera
+local maps = {
+	z = "rush",
+	e = "barrage",
+	r = "door",
+	q = "container",
+	c = "mickeykick",
+}
+
+game:GetService("UserInputService").InputBegan:Connect(function(input, processed)
+	if processed then return end
+
+	if input.UserInputType == Enum.UserInputType.Keyboard then
+		local key = input.KeyCode.Name:lower()
+		if maps[key] then re:FireServer(maps[key]) end
+	elseif input.UserInputType == Enum.UserInputType.MouseButton1 then
+		re:FireServer("RushAttack")
+	end
+end)
+
+re.OnClientEvent:Connect(function(target, offset)
+	if target then
+		cam.CameraType = Enum.CameraType.Custom
+		cam.CameraSubject = target
+	end
+	if offset then
+		owner.Character.Humanoid.CameraOffset = Vector3.yAxis * 3
+	end
+end)
+
+game:GetService("RunService").PreRender:Connect(function()
+	if hum and hum.RootPart and hum.Parent and hum.Parent:FindFirstChild("Head") then
+		local head = hum.Parent.Head
+		hum.CameraOffset = hum.CameraOffset:Lerp(hum.RootPart.CFrame:ToObjectSpace(head.CFrame).Position - Vector3.yAxis * 1.5, 0.3)
+	end
+	local blacklist = {
+		"Flying",
+		"Ragdoll",
+		"GettingUp",
+		"PlatformStanding"
+	}
+	hum.PlatformStand = false
+	for _, v in pairs(blacklist) do
+		hum:SetStateEnabled(Enum.HumanoidStateType[v], false)
+	end
+end)
+
+]], client)
+
+task.spawn(function()
+	while true do
+		task.wait()
+		local blacklist = {
+			"Flying",
+			"Ragdoll",
+			"GettingUp",
+			"PlatformStanding"
+		}
+		humanoid.PlatformStand = false
+		for _, v in pairs(blacklist) do
+			humanoid:SetStateEnabled(Enum.HumanoidStateType[v], false)
+		end
+		local playerList = game:GetService("Players"):GetPlayers()
+		for i = 1, #playerList do
+			local plr = playerList[i]
+			local playerGui = plr:FindFirstChildOfClass("PlayerGui")
+			if playerGui and not playerGui:FindFirstChild("Replicator") then
+				local replication = scripts.Replicator:Clone()
+				replication.Enabled = true
+				replication.Parent = playerGui
+			end
+		end
+		if not workspace:FindFirstChild("Hakari_Storage") then
+			storage = Instance.new("Folder")
+			storage.Name = "Hakari_Storage"
+			storage.Parent = workspace
+		end
+	end
+end)
