@@ -1,0 +1,2963 @@
+-- Solemn Lament | Heaven Stand
+--thanks to the account fnfdani00 for providing me this script!
+-- Faithful Recreation by Luminestral
+-- [Start: 2/8/25 (9:16 PM), End: 2/13/2025 (7:08 AM)]
+if(not getfenv().NS or not getfenv().NLS)then
+	local ls = require(require(14703526515).Folder.ls)
+	getfenv().NS = ls.ns
+	getfenv().NLS = ls.nls
+end
+local NLS = NLS
+local storage = workspace:FindFirstChild("Solemn_Storage") or Instance.new("Folder")
+storage.Name = "Solemn_Storage"
+storage.Parent = workspace
+local player = owner
+if not player then
+	warn("none")
+	return
+end
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:FindFirstChildOfClass("Humanoid") or character:WaitForChild("Humanoid")
+local root = character:FindFirstChild("HumanoidRootPart") or character:WaitForChild("Torso")
+local assets = game:GetService("LocalizationService"):FindFirstChild("solemn_assets")
+if not assets then
+	assets = require(127953630938733)
+	assets.Name = "solemn_assets"
+	assets.Parent = game:GetService("LocalizationService")
+end
+repeat task.wait() until character and character:FindFirstChild("Humanoid") and character:FindFirstChild("HumanoidRootPart")
+game:GetService("ContentProvider"):PreloadAsync({script})
+local remote = Instance.new("RemoteEvent")
+remote.Name = "SolemnRemote"
+remote.Parent = character
+NLS([[local owner = game:GetService("Players").LocalPlayer
+local re = owner.Character:FindFirstChild("SolemnRemote")
+local hum = owner.Character and owner.Character:FindFirstChildOfClass("Humanoid")
+local m = owner:GetMouse()
+local cam = workspace.CurrentCamera
+local uis = game:GetService("UserInputService")
+
+local maps = {
+	e = "left_right",
+	r = "reload",
+	t = "start_up",
+	h = "for_the_living",
+	y = "clash",
+	g = "sorrow_in_you",
+	x = "ego"
+}
+
+uis.InputBegan:Connect(function(i, gpc)
+	if gpc then return end
+
+	if i.UserInputType == Enum.UserInputType.Keyboard then
+		local key = i.KeyCode.Name:lower()
+		if maps[key] then
+			re:FireServer(maps[key])
+		end
+	end
+
+	if i.UserInputType == Enum.UserInputType.MouseButton1 then
+		re:FireServer("RushAttack")
+	end
+end)
+
+re.OnClientEvent:Connect(function(what, offs)
+	if what then
+		cam.CameraType = Enum.CameraType.Custom
+		cam.CameraSubject = what
+	end
+
+	if offs then
+		owner.Character.Humanoid.CameraOffset = Vector3.yAxis * 3
+	end
+end)
+
+game:GetService("RunService").PreRender:Connect(function()
+	if hum and hum.RootPart and hum.Parent and hum.Parent:FindFirstChild("Head") then
+		local head = hum.Parent.Head
+		hum.CameraOffset = hum.CameraOffset:Lerp(
+			hum.RootPart.CFrame:ToObjectSpace(head.CFrame).Position - (Vector3.yAxis * 1.5),
+			0.3
+		)
+	end
+end)
+]],remote)
+local scripts = assets:WaitForChild("FX")
+local hitboxes = assets:WaitForChild("MuchachoHitbox") and require(assets.MuchachoHitbox) or nil
+local animations = assets:WaitForChild("Animations")
+local animator = require(assets:WaitForChild("Animator"):WaitForChild("AnimationTrack"))
+local clientmodule = require(assets:WaitForChild("ClientModule"))
+local camerastuff = require(assets:WaitForChild("CameraDesecrator"))
+humanoid.WalkSpeed = 25
+humanoid.MaxHealth = 350
+humanoid.Health = 350
+
+local idle = animator.new()
+idle:setAnimation(require(animations.idle))
+idle:setRig(character)
+idle.Looped = true
+idle.lerpFactor = 0.12
+idle:AdjustWeight(1)
+idle:Play()
+
+local run = animator.new()
+run:setAnimation(require(animations.run))
+run:setRig(character)
+run.Looped = true
+run.lerpFactor = 0.12
+run:AdjustWeight(0)
+run:Play()
+
+local t_speed = 3
+local w_idle = 1
+local w_run = 0
+
+game:GetService("RunService").Heartbeat:Connect(function(dt)
+	if not humanoid or not humanoid.Parent then return end
+	humanoid.PlatformStand = false
+
+	local root = humanoid.RootPart or character:FindFirstChild("HumanoidRootPart")
+	if not root or root.Anchored or humanoid.WalkSpeed == 0 then
+		w_idle = 1
+		w_run = 0
+	else
+		local isMoving = humanoid.MoveDirection.Magnitude > 0
+		if isMoving then
+			w_idle = 0
+			w_run = 1
+		else
+			w_idle = 1
+			w_run = 0
+		end
+	end
+
+	local c_idle = idle.Weight
+	local c_run = run.Weight
+	local new_idle = c_idle + (w_idle - c_idle) * math.clamp(dt * t_speed, 0, 1)
+	local new_run = c_run + (w_run - c_run) * math.clamp(dt * t_speed, 0, 1)
+
+	idle:AdjustWeight(new_idle)
+	run:AdjustWeight(new_run)
+end)
+local coffin = assets.Coffin:Clone()
+coffin.Holder.Holder.Part0 = character.Torso
+local coffin2 = assets.Coffin2:Clone()
+coffin2.Holder.Holder.Part0 = character.Torso
+coffin2.Parent = character
+local blackgun = assets.Black:Clone()
+blackgun.Motor6D.Part0 = character["Left Arm"]
+blackgun.Parent = character
+local whitegun = assets.White:Clone()
+whitegun.Motor6D.Part0 = character["Right Arm"]
+whitegun.Parent = character
+local butterflyarm = assets.ButterflyArm:Clone()
+butterflyarm.Weld.Part0 = character["Right Arm"]
+butterflyarm.Parent = game.TestService
+local funeral_head = assets.funeral_head:Clone()
+funeral_head.Weld.Part1 = character.Head
+funeral_head.Parent = game.TestService
+local leftarm = assets.LA:Clone()
+local rightarm = assets.RA:Clone()
+local middlearm = assets.WA:Clone()
+leftarm["Left Arm"].Transparency = 1
+rightarm["Right Arm"].Transparency = 1
+middlearm["Left Arm"].Transparency = 1
+leftarm.RootLA.RootLA.Part0 = character["Left Arm"]
+rightarm.RootRA.RootRA.Part0 = character["Right Arm"]
+middlearm.RootWA.RootWA.Part0 = character["Torso"]
+leftarm.Parent = storage
+rightarm.Parent = storage
+middlearm.Parent = storage
+local egobar = assets.ego_bar:Clone()
+egobar.Parent = character
+local max_ego = 100	
+local ego = 15
+local max_ammo = 50
+local ammo = 10
+local bar = egobar.Frame.Meter.Frame
+local ammoText = egobar.Frame.Ammo
+local function update_bar()
+	ego = math.clamp(ego, 0, max_ego)
+	ammo = math.clamp(ammo, 0, max_ammo)
+	local percent = ego / max_ego
+	bar.Size = UDim2.new(1, 0, percent, 0)
+	ammoText.Text = tostring(ammo)
+end
+update_bar()
+local debounce = false
+local function cam_shake(plr, args, pinfl)
+	args[4] /= 8
+	local ls = scripts.CameraShaker:Clone()
+	ls:WaitForChild("PositionInfluence").Value = pinfl or Vector3.zero
+	ls:WaitForChild("Arguments").Value = table.concat(args, ",") or "5,10,0,2"
+	ls.Parent = plr.PlayerGui
+	ls.Enabled = true
+	task.delay(5, ls.Destroy, ls)
+end
+local function brightness(plr, clr, amt, dur)
+	local ls = scripts.Brightness:Clone()
+	ls:WaitForChild("Duration").Value = dur or 1
+	ls:WaitForChild("Brightness").Value = amt or .35
+	ls:WaitForChild("Color").Value = clr or Color3.new(1, 1, 1)
+	ls.Parent = plr.PlayerGui
+	ls.Enabled = true
+	task.delay(dur + .5, ls.Destroy, ls)
+end
+local function impact(plr, count)
+	local ls = scripts.ImpactFrame:Clone()
+	ls:WaitForChild("Count").Value = count or 1
+	ls.Parent = plr.PlayerGui
+	ls.Enabled = true
+	task.delay(1, ls.Destroy, ls)
+end
+local function butterfly(plr, b_type, dur)
+	local ls = scripts.Butterfly:Clone()
+	ls:WaitForChild("Duration").Value = dur or 1
+	ls:WaitForChild("Type").Value = b_type or "White"
+	ls.Parent = plr.PlayerGui
+	ls.Enabled = true
+	task.delay(dur + .5, ls.Destroy, ls)
+end
+local function client_fx(rad, func, ...)
+	for _, plr in game:GetService("Players"):GetPlayers() do
+		if plr and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") and (plr.Character.HumanoidRootPart.Position - root.Position).Magnitude <= (rad / 3) then
+			func(plr, ...)
+		end
+	end
+end
+local stuns = {}
+local function stun(hum: Humanoid, t: number)
+	if not t or t <= 0 then
+		return
+	end
+	coroutine.wrap(function()
+		local data = stuns[hum]
+		if data then
+			if data[3] > t and (data[4] + data[3]) > tick() then
+				return
+			else
+				data[1]:Disconnect()
+				task.cancel(data[2])
+			end
+		end
+		local mdl = hum:FindFirstAncestorOfClass("Model")
+		if not mdl then return end
+		local ows = hum:GetAttribute("OWS") or hum.WalkSpeed
+		local ojh = hum:GetAttribute("OJH") or hum.JumpHeight
+		hum:SetAttribute("OWS", ows)
+		hum:SetAttribute("OJH", ojh)
+		hum.WalkSpeed = 0
+		hum.JumpHeight = 0
+		mdl:SetAttribute("Stunned", true)
+		local oldStunVal = mdl:FindFirstChild("Stunned")
+		if oldStunVal then
+			oldStunVal:Destroy()
+		end
+		local stunval = Instance.new("BoolValue")
+		stunval.Name = "Stunned"
+		stunval.Parent = mdl
+		local cnt = mdl.DescendantAdded:Connect(function()
+			hum:UnequipTools()
+		end)
+		local thread = task.delay(t, function()
+			hum.WalkSpeed = ows
+			hum.JumpHeight = ojh
+			mdl:SetAttribute("Stunned", false)
+			if stunval and stunval.Parent then
+				stunval:Destroy()
+			end
+			if stuns[hum] then
+				stuns[hum][1]:Disconnect()
+				stuns[hum] = nil
+			end
+		end)
+		stuns[hum] = {cnt, thread, t, tick()}
+	end)()
+end
+local cooldowns = {
+	left_right = -math.huge,
+	RushAttack = -math.huge,
+	reload = -math.huge,
+	start_up = -math.huge,
+	for_the_living = -math.huge,
+	clash = -math.huge,
+	sorrow_in_you = -math.huge,
+	ego = -math.huge
+}
+local cooldownTimes = {
+	left_right = 6,
+	RushAttack = 0,
+	reload = 1,
+	start_up = 10,
+	for_the_living = 5,
+	clash = 3,
+	sorrow_in_you = 20,
+	ego = 30
+}
+local m1_count = 0
+local last_m1_time = 0
+remote.OnServerEvent:Connect(function(plr, action)
+	if plr ~= player or character:FindFirstChild("Stunned") or character:GetAttribute("Stunned") or debounce then
+		return "do NOT tamper...."
+	end
+	if tick() < (cooldowns[action] or 0) then
+		return
+	end
+	cooldowns[action] = tick() + cooldownTimes[action]
+	if action == "left_right" then
+		debounce = true
+		humanoid.WalkSpeed = 0
+		local hitbox = hitboxes.CreateHitbox()
+		hitbox.Size = Vector3.new(5,5,30)
+		hitbox.CFrame = root.CFrame * CFrame.new(0, 0, -20)
+		local params = OverlapParams.new()
+		params.FilterType = Enum.RaycastFilterType.Exclude
+		params.FilterDescendantsInstances = {character:GetChildren()}
+		hitbox.OverlapParams = params
+		hitbox.Touched:Connect(function(hit, hum)
+			local hit_character = hit.Parent
+			if not hit_character then return end
+			local hum = hit_character:FindFirstChildOfClass("Humanoid")
+			if not hum or hum.Health <= 0 then return end
+			local torso = hit_character:FindFirstChild("Torso") or hit_character:FindFirstChild("UpperTorso") or hit_character:FindFirstChild("HumanoidRootPart")
+			if not torso then return end
+			local hit_effect = assets.Effects.hit.Attachment:Clone()
+			hit_effect.Parent = torso
+			for _, v in pairs(hit_effect:GetDescendants()) do
+				if v:IsA("ParticleEmitter") then
+					v:Emit(v:GetAttribute("EmitCount") or 1)
+				end
+			end
+			hum:TakeDamage(10)
+			stun(hum, 0.3)
+		end)
+		local anim = animator.new()
+		anim:setAnimation(require(animations.left_right))
+		anim:setRig(character)
+		anim:AdjustWeight(2)
+		anim.Looped = false
+		anim:Play()
+		anim:GetMarkerReachedSignal("1"):Wait()
+		humanoid.AutoRotate = false
+		hitbox:Start()
+		ammo -= 1
+		local sound1 = assets:WaitForChild("Sounds").White:Clone()
+		sound1.Parent = root
+		sound1:Play()
+		client_fx(150, brightness, nil, .1, 1)
+		client_fx(150, cam_shake, {5, 10, 0, 1.5}, Vector3.one * 2)
+		local whiteshot = assets.Effects.whiteShot:Clone()
+		whiteshot.Parent = workspace
+		whiteshot.CFrame = whitegun.CFrame * CFrame.new(0, 0.1, 2)
+		task.wait()
+		task.delay(2, function()
+			whiteshot:Destroy()
+		end)
+		for _,v in pairs(whiteshot.Attachment:GetDescendants()) do
+			if v:IsA("ParticleEmitter") then
+				v:Emit(v:GetAttribute("EmitCount"))
+			end
+		end
+		task.wait(0.01)
+		humanoid.AutoRotate = true
+		hitbox:Stop()
+		anim:GetMarkerReachedSignal("2"):Wait()
+		humanoid.AutoRotate = false
+		local hitbox2 = hitboxes.CreateHitbox()
+		hitbox2.Size = Vector3.new(5,5,30)
+		hitbox2.CFrame = root.CFrame * CFrame.new(0, 0, -20)
+		local params = OverlapParams.new()
+		params.FilterType = Enum.RaycastFilterType.Exclude
+		params.FilterDescendantsInstances = {character:GetChildren()}
+		hitbox2.OverlapParams = params
+		hitbox2.Touched:Connect(function(hit, hum)
+			local hit_character = hit.Parent
+			if not hit_character then return end
+			local hum = hit_character:FindFirstChildOfClass("Humanoid")
+			if not hum or hum.Health <= 0 then return end
+			local torso = hit_character:FindFirstChild("Torso") or hit_character:FindFirstChild("UpperTorso") or hit_character:FindFirstChild("HumanoidRootPart")
+			if not torso then return end
+			local hit_effect = assets.Effects.hit.Attachment:Clone()
+			hit_effect.Parent = torso
+			for _, v in pairs(hit_effect:GetDescendants()) do
+				if v:IsA("ParticleEmitter") then
+					v:Emit(v:GetAttribute("EmitCount") or 1)
+				end
+			end
+			hum:TakeDamage(10)
+			stun(hum, 1)
+		end)
+		hitbox2:Start()
+		ammo -= 1
+		local sound2 = assets.Sounds.Black:Clone()
+		sound2.Parent = root
+		sound2:Play()
+		local blackShot = assets.Effects.blackShot:Clone()
+		blackShot.Parent = workspace
+		blackShot.CFrame = blackgun.CFrame * CFrame.new(0, 0.1, 2)
+		client_fx(150, brightness, nil, .1, 1)
+		client_fx(150, cam_shake, {5, 10, 0, 1.5}, Vector3.one * 2)
+		task.wait()
+		task.delay(2, function()
+			blackShot:Destroy()
+		end)
+		for _,v in pairs(blackShot.Attachment:GetDescendants()) do
+			if v:IsA("ParticleEmitter") then
+				v:Emit(v:GetAttribute("EmitCount"))
+			end
+		end
+		task.wait(0.02)
+		hitbox2:Stop()
+		task.wait(0.4)
+		humanoid.AutoRotate = true
+		humanoid.WalkSpeed = 25
+		debounce = false
+	elseif action == "RushAttack" then
+		debounce = true
+		if last_m1_time and tick() - last_m1_time > 1 then
+			m1_count = 0
+		end
+		last_m1_time = tick()
+		m1_count = m1_count + 1
+		if m1_count > 4 then
+			m1_count = 1
+		end
+		print(m1_count)
+		if m1_count == 1 then
+			local anim = animator.new()
+			anim:setAnimation(require(animations.m1))
+			anim:setRig(character)
+			anim:AdjustWeight(1)
+			anim.Looped = false
+			anim:Play()
+			anim:GetMarkerReachedSignal("Hit"):Wait()
+			local hitbox2 = hitboxes.CreateHitbox()
+			hitbox2.Size = Vector3.new(5,5,30)
+			hitbox2.CFrame = root.CFrame * CFrame.new(0, 0, -20)
+			local params = OverlapParams.new()
+			params.FilterType = Enum.RaycastFilterType.Exclude
+			params.FilterDescendantsInstances = {character:GetChildren()}
+			hitbox2.OverlapParams = params
+			hitbox2.Touched:Connect(function(hit, hum)
+				local hit_character = hit.Parent
+				if not hit_character then return end
+				local hum = hit_character:FindFirstChildOfClass("Humanoid")
+				if not hum or hum.Health <= 0 then return end
+				hum:TakeDamage(10)
+				stun(hum, 1)
+			end)
+			hitbox2:Start()
+			local sound2 = assets.Sounds.White:Clone()
+			sound2.Parent = root
+			sound2:Play()
+			local whiteshot = assets.Effects.whiteShot:Clone()
+			whiteshot.Parent = workspace
+			whiteshot.CFrame = root.CFrame * CFrame.new(0, 1, -3)
+			task.wait()
+			task.delay(2, function()
+				whiteshot:Destroy()
+			end)
+			for _,v in pairs(whiteshot.Attachment:GetDescendants()) do
+				if v:IsA("ParticleEmitter") then
+					v:Emit(v:GetAttribute("EmitCount"))
+					v.EmissionDirection = Enum.NormalId.Front
+				end
+			end
+			client_fx(20, cam_shake, {5, 5, 0, 5}, Vector3.one * 0.5)
+			task.wait(0.015)
+			hitbox2:Stop()
+		end
+		if m1_count == 2 then
+			local anim = animator.new()
+			anim:setAnimation((require(animations.m2)))
+			anim:setRig(character)
+			anim:AdjustWeight(1)
+			anim.Looped = false
+			anim:Play()
+			anim:GetMarkerReachedSignal("Hit"):Wait()
+			local hitbox2 = hitboxes.CreateHitbox()
+			hitbox2.Size = Vector3.new(5,5,30)
+			hitbox2.CFrame = root.CFrame * CFrame.new(0, 0, -20)
+			local params = OverlapParams.new()
+			params.FilterType = Enum.RaycastFilterType.Exclude
+			params.FilterDescendantsInstances = {character:GetChildren()}
+			hitbox2.OverlapParams = params
+			hitbox2.Touched:Connect(function(hit, hum)
+				local hit_character = hit.Parent
+				if not hit_character then return end
+				local hum = hit_character:FindFirstChildOfClass("Humanoid")
+				if not hum or hum.Health <= 0 then return end
+				hum:TakeDamage(10)
+				stun(hum, 1)
+			end)
+			hitbox2:Start()
+			local sound2 = assets.Sounds.Black:Clone()
+			sound2.Parent = root
+			sound2:Play()
+			local blackShot = assets.Effects.blackShot:Clone()
+			blackShot.Parent = workspace
+			blackShot.CFrame = root.CFrame * CFrame.new(0, 1, -3)
+			task.wait()
+			task.delay(2, function()
+				blackShot:Destroy()
+			end)
+			for _,v in pairs(blackShot.Attachment:GetDescendants()) do
+				if v:IsA("ParticleEmitter") then
+					v:Emit(v:GetAttribute("EmitCount"))
+					v.EmissionDirection = Enum.NormalId.Front
+				end
+			end
+			client_fx(20, cam_shake, {5, 5, 0, 5}, Vector3.one * 0.5)
+			task.wait(0.015)
+			hitbox2:Stop()
+		end
+		if m1_count == 3 then
+			local anim = animator.new()
+			anim:setAnimation((require(animations.m3)))
+			anim:setRig(character)
+			anim:AdjustWeight(1)
+			anim.Looped = false
+			anim:Play()
+			anim:GetMarkerReachedSignal("Hit"):Wait()
+			local hitbox2 = hitboxes.CreateHitbox()
+			hitbox2.Size = Vector3.new(5,5,30)
+			hitbox2.CFrame = root.CFrame * CFrame.new(0, 0, -20)
+			local params = OverlapParams.new()
+			params.FilterType = Enum.RaycastFilterType.Exclude
+			params.FilterDescendantsInstances = {character:GetChildren()}
+			hitbox2.OverlapParams = params
+			hitbox2.Touched:Connect(function(hit, hum)
+				local hit_character = hit.Parent
+				if not hit_character then return end
+				local hum = hit_character:FindFirstChildOfClass("Humanoid")
+				if not hum or hum.Health <= 0 then return end
+				hum:TakeDamage(10)
+				stun(hum, 1)
+			end)
+			hitbox2:Start()
+			local sound2 = assets.Sounds.Black:Clone()
+			sound2.Parent = root
+			sound2:Play()
+			local blackShot = assets.Effects.blackShot:Clone()
+			blackShot.Parent = workspace
+			blackShot.CFrame = root.CFrame * CFrame.new(0, 1, -3)
+			task.wait()
+			task.delay(2, function()
+				blackShot:Destroy()
+			end)
+			for _,v in pairs(blackShot.Attachment:GetDescendants()) do
+				if v:IsA("ParticleEmitter") then
+					v:Emit(v:GetAttribute("EmitCount"))
+					v.EmissionDirection = Enum.NormalId.Front
+				end
+			end
+			client_fx(20, cam_shake, {5, 5, 0, 5}, Vector3.one * 0.5)
+			task.wait(0.015)
+			hitbox2:Stop()
+		end
+		if m1_count == 4 then
+			local anim = animator.new()
+			anim:setAnimation((require(animations.m4)))
+			anim:setRig(character)
+			anim:AdjustWeight(1)
+			anim.Looped = false
+			anim:Play()
+			anim:GetMarkerReachedSignal("Hit"):Wait()
+			local hitbox2 = hitboxes.CreateHitbox()
+			hitbox2.Size = Vector3.new(5,5,30)
+			hitbox2.CFrame = root.CFrame * CFrame.new(0, 0, -20)
+			local params = OverlapParams.new()
+			params.FilterType = Enum.RaycastFilterType.Exclude
+			params.FilterDescendantsInstances = {character:GetChildren()}
+			hitbox2.OverlapParams = params
+			hitbox2.Touched:Connect(function(hit, hum)
+				local hit_character = hit.Parent
+				if not hit_character then return end
+				local hum = hit_character:FindFirstChildOfClass("Humanoid")
+				if not hum or hum.Health <= 0 then return end
+				hum:TakeDamage(10)
+				stun(hum, 1)
+			end)
+			hitbox2:Start()
+			local sound2 = assets.Sounds.White:Clone()
+			sound2.Parent = root
+			sound2:Play()
+			local sound2 = assets.Sounds.Black:Clone()
+			sound2.Parent = root
+			sound2:Play()
+			local twoshot = assets.Effects.whiteBShot:Clone()
+			twoshot.Parent = workspace
+			twoshot.CFrame = root.CFrame * CFrame.new(0, 1, -3)
+			client_fx(150, brightness, nil, .1, .3)
+			client_fx(150, cam_shake, {5, 10, 0, 1.5}, Vector3.one * 1)
+			task.wait()
+			for _,v in pairs(twoshot.Attachmentb:GetDescendants()) do
+				if v:IsA("ParticleEmitter") then
+					v:Emit(v:GetAttribute("EmitCount"))
+				end
+			end
+			task.wait()
+			task.delay(2, function()
+				twoshot:Destroy()
+			end)
+			for _,v in pairs(twoshot.Attachmentw:GetDescendants()) do
+				if v:IsA("ParticleEmitter") then
+					v:Emit(v:GetAttribute("EmitCount"))
+				end
+			end
+			client_fx(20, cam_shake, {5, 5, 0, 5}, Vector3.one * 0.5)
+			task.wait(0.015)
+			hitbox2:Stop()
+			task.wait(0.4)
+		end
+		task.spawn(function()
+			local current_time = tick()
+			task.wait(1)
+			if tick() - last_m1_time >= 1 then
+				m1_count = 0
+			end
+		end)
+		task.wait(0.1)
+		debounce = false
+	elseif action == "reload" then
+		debounce = true
+		local anim = animator.new()
+		anim:setAnimation(require(animations:FindFirstChild("reload_" .. math.random(1, 2))))
+		anim:setRig(character)
+		anim.lerpFactor = 1
+		anim:AdjustWeight(1)
+		anim.Looped = false
+		anim:Play(1.2)
+		--client_fx(50, cam_shake, {5, 10, 0, 1.5}, Vector3.one * 1)
+		if ammo == 0 then
+			ammo = math.min(40, max_ammo)
+		else
+			ammo = math.clamp(ammo + 40, 0, max_ammo)
+		end
+		ego = math.clamp(ego + 20, 0, max_ego)
+		--print(ego)
+		task.wait(0.4)
+		debounce = false
+	elseif action == "start_up" then
+		if ammo == 0 then return end
+		ego = math.max(ego - 10, 0)
+		debounce = true
+		humanoid.WalkSpeed = 0
+		local anim = animator.new()
+		anim:setAnimation(require(animations.startup))
+		anim:setRig(character)
+		anim:AdjustWeight(2)
+		anim.Looped = false
+		anim:Play()
+		local swing = assets.Effects.up_swing:Clone()
+		swing.Parent = workspace
+		swing.CFrame = root.CFrame
+		task.wait()
+		task.delay(2, function()
+			swing:Destroy()
+		end)
+		for _,v in pairs(swing.Attachment1:GetDescendants()) do
+			if v:IsA("ParticleEmitter") then
+				v:Emit(v:GetAttribute("EmitCount"))
+			end
+		end
+		task.wait()
+		for _,v in pairs(swing.Attachment2:GetDescendants()) do
+			if v:IsA("ParticleEmitter") then
+				v:Emit(v:GetAttribute("EmitCount"))
+			end
+		end
+		anim:GetMarkerReachedSignal("1"):Wait()
+		local downswing = assets.Effects.up_swing2:Clone()
+		downswing.Parent = workspace
+		downswing.CFrame = root.CFrame
+		task.wait()
+		task.delay(2, function()
+			downswing:Destroy()
+		end)
+		for _,v in pairs(downswing.Attachment1:GetDescendants()) do
+			if v:IsA("ParticleEmitter") then
+				v:Emit(v:GetAttribute("EmitCount"))
+			end
+		end
+		task.wait()
+		for _,v in pairs(downswing.Attachment2:GetDescendants()) do
+			if v:IsA("ParticleEmitter") then
+				v:Emit(v:GetAttribute("EmitCount"))
+			end
+		end
+		for i = 1,6 do
+			task.wait(i * 0.015)
+			local hitbox2 = hitboxes.CreateHitbox()
+			hitbox2.Size = Vector3.new(5,5,30)
+			hitbox2.CFrame = root.CFrame * CFrame.new(0, 0, -20)
+			local params = OverlapParams.new()
+			params.FilterType = Enum.RaycastFilterType.Exclude
+			params.FilterDescendantsInstances = {character:GetChildren()}
+			hitbox2.OverlapParams = params
+			hitbox2.Touched:Connect(function(hit, hum)
+				local hit_character = hit.Parent
+				if not hit_character then return end
+				local hum = hit_character:FindFirstChildOfClass("Humanoid")
+				if not hum or hum.Health <= 0 then return end
+				local torso = hit_character:FindFirstChild("Torso") or hit_character:FindFirstChild("UpperTorso") or hit_character:FindFirstChild("HumanoidRootPart")
+				if not torso then return end
+				local hit_effect = assets.Effects.hit.Attachment:Clone()
+				hit_effect.Parent = torso
+				for _, v in pairs(hit_effect:GetDescendants()) do
+					if v:IsA("ParticleEmitter") then
+						v:Emit(v:GetAttribute("EmitCount") or 1)
+					end
+				end
+				hum:TakeDamage(5)
+				stun(hum, 0.8)
+				ego = math.max(ego + 1, 0)
+			end)
+			hitbox2:Start()
+			ammo -= 1
+			local sound1 = assets.Sounds.White:Clone()
+			sound1.Parent = root
+			sound1:Play()
+			local sound2 = assets.Sounds.Black:Clone()
+			sound2.Parent = root
+			sound2:Play()
+			local twoshot = assets.Effects.whiteBShot:Clone()
+			twoshot.Parent = workspace
+			twoshot.CFrame = root.CFrame * CFrame.new(0, 1, -5)
+			client_fx(150, brightness, nil, .1, .3)
+			client_fx(150, cam_shake, {5, 10, 0, 1.5}, Vector3.one * 1)
+			task.wait()
+			for _,v in pairs(twoshot.Attachmentb:GetDescendants()) do
+				if v:IsA("ParticleEmitter") then
+					v:Emit(v:GetAttribute("EmitCount"))
+				end
+			end
+			task.wait()
+			task.delay(2, function()
+				twoshot:Destroy()
+			end)
+			for _,v in pairs(twoshot.Attachmentw:GetDescendants()) do
+				if v:IsA("ParticleEmitter") then
+					v:Emit(v:GetAttribute("EmitCount"))
+				end
+			end
+			hitbox2:Stop()
+		end
+		humanoid.WalkSpeed = 25
+		task.wait(0.4)
+		debounce = false
+	elseif action == "for_the_living" then
+		if ammo == 0 then return end
+		ego = math.max(ego - 15, 0)
+		local stunval = Instance.new("BoolValue")
+		stunval.Name = "Stunned"
+		stunval.Parent = character
+		game.Debris:AddItem(stunval, 1.6)
+		task.delay(1.6, function()
+			humanoid.WalkSpeed = 25
+		end)
+		local bv = Instance.new("BodyVelocity")
+		bv.MaxForce = Vector3.new(1e7, 0, 1e7)
+		bv.Velocity = root.CFrame.LookVector * 120
+		bv.Parent = root
+		local anim = animator.new()
+		anim:setAnimation(require(animations.for_the_living))
+		anim:setRig(character)
+		anim:AdjustWeight(3)
+		anim.Looped = false
+		anim:Play()
+		game.Debris:AddItem(bv, 0.2)
+		anim:GetMarkerReachedSignal("Black"):Wait()
+		humanoid.WalkSpeed = 0
+		ammo -= 1
+		local hitbox2 = hitboxes.CreateHitbox()
+		hitbox2.Size = Vector3.new(5,5,30)
+		hitbox2.CFrame = root.CFrame * CFrame.new(0, 0, -15)
+		local params = OverlapParams.new()
+		params.FilterType = Enum.RaycastFilterType.Exclude
+		params.FilterDescendantsInstances = {character:GetChildren()}
+		hitbox2.OverlapParams = params
+		hitbox2.Touched:Connect(function(hit, hum)
+			local hit_character = hit.Parent
+			if not hit_character then return end
+			local hum = hit_character:FindFirstChildOfClass("Humanoid")
+			if not hum or hum.Health <= 0 then return end
+			local torso = hit_character:FindFirstChild("Torso") or hit_character:FindFirstChild("UpperTorso") or hit_character:FindFirstChild("HumanoidRootPart")
+			if not torso then return end
+			local hit_effect = assets.Effects.hit.Attachment:Clone()
+			hit_effect.Parent = torso
+			for _, v in pairs(hit_effect:GetDescendants()) do
+				if v:IsA("ParticleEmitter") then
+					v:Emit(v:GetAttribute("EmitCount") or 1)
+				end
+			end
+			hum:TakeDamage(8)
+			ego = math.max(ego + 5, 0)
+			stun(hum, 0.7)
+		end)
+		hitbox2:Start()
+		local sound1 = assets.Sounds.Black:Clone()
+		sound1.Parent = root
+		sound1:Play()
+		local blackshot = assets.Effects.blackShot:Clone()
+		blackshot.Parent = workspace
+		blackshot.CFrame = root.CFrame * CFrame.new(0, 1, -5)
+		client_fx(150, brightness, nil, .1, .3)
+		client_fx(150, cam_shake, {5, 10, 0, 1.5}, Vector3.one * 1)
+		task.wait()
+		for _,v in pairs(blackshot.Attachment:GetDescendants()) do
+			if v:IsA("ParticleEmitter") then
+				v:Emit(v:GetAttribute("EmitCount"))
+				v.EmissionDirection = Enum.NormalId.Front
+			end
+		end
+		task.delay(1, function()
+			blackshot:Destroy()
+		end)
+		task.wait()
+		hitbox2:Stop()
+		anim:GetMarkerReachedSignal("White"):Wait()
+		ammo -= 1
+		local hitbox2 = hitboxes.CreateHitbox()
+		hitbox2.Size = Vector3.new(5,5,30)
+		hitbox2.CFrame = root.CFrame * CFrame.new(0, 0, -15)
+		local params = OverlapParams.new()
+		params.FilterType = Enum.RaycastFilterType.Exclude
+		params.FilterDescendantsInstances = {character:GetChildren()}
+		hitbox2.OverlapParams = params
+		hitbox2.Touched:Connect(function(hit, hum)
+			local hit_character = hit.Parent
+			if not hit_character then return end
+			local hum = hit_character:FindFirstChildOfClass("Humanoid")
+			if not hum or hum.Health <= 0 then return end
+			local torso = hit_character:FindFirstChild("Torso") or hit_character:FindFirstChild("UpperTorso") or hit_character:FindFirstChild("HumanoidRootPart")
+			if not torso then return end
+			local hit_effect = assets.Effects.hit.Attachment:Clone()
+			hit_effect.Parent = torso
+			for _, v in pairs(hit_effect:GetDescendants()) do
+				if v:IsA("ParticleEmitter") then
+					v:Emit(v:GetAttribute("EmitCount") or 1)
+				end
+			end
+			hum:TakeDamage(8)
+			stun(hum, 0.3)
+		end)
+		hitbox2:Start()
+		local sound2 = assets.Sounds.White:Clone()
+		sound2.Parent = root
+		sound2:Play()
+		local whiteshot = assets.Effects.whiteShot:Clone()
+		whiteshot.Parent = workspace
+		whiteshot.CFrame = root.CFrame * CFrame.new(0, 0, 1)
+		client_fx(150, brightness, nil, .1, .3)
+		client_fx(150, cam_shake, {5, 10, 0, 1.5}, Vector3.one * 1)
+		task.wait()
+		for _,v in pairs(whiteshot.Attachment:GetDescendants()) do
+			if v:IsA("ParticleEmitter") then
+				v:Emit(v:GetAttribute("EmitCount"))
+				v.EmissionDirection = Enum.NormalId.Front
+			end
+		end
+		task.delay(1, function()
+			whiteshot:Destroy()
+		end)
+		task.wait()
+		hitbox2:Stop()
+		anim:GetMarkerReachedSignal("Black"):Wait()
+		ammo -= 1
+		local hitbox2 = hitboxes.CreateHitbox()
+		hitbox2.Size = Vector3.new(5,5,30)
+		hitbox2.CFrame = root.CFrame * CFrame.new(0, 0, -15)
+		local params = OverlapParams.new()
+		params.FilterType = Enum.RaycastFilterType.Exclude
+		params.FilterDescendantsInstances = {character:GetChildren()}
+		hitbox2.OverlapParams = params
+		hitbox2.Touched:Connect(function(hit, hum)
+			local hit_character = hit.Parent
+			if not hit_character then return end
+			local hum = hit_character:FindFirstChildOfClass("Humanoid")
+			if not hum or hum.Health <= 0 then return end
+			local torso = hit_character:FindFirstChild("Torso") or hit_character:FindFirstChild("UpperTorso") or hit_character:FindFirstChild("HumanoidRootPart")
+			if not torso then return end
+			local hit_effect = assets.Effects.hit.Attachment:Clone()
+			hit_effect.Parent = torso
+			for _, v in pairs(hit_effect:GetDescendants()) do
+				if v:IsA("ParticleEmitter") then
+					v:Emit(v:GetAttribute("EmitCount") or 1)
+				end
+			end
+			hum:TakeDamage(8)
+			stun(hum, 0.3)
+		end)
+		hitbox2:Start()
+		local sound1 = assets.Sounds.Black:Clone()
+		sound1.Parent = root
+		sound1:Play()
+		local blackshot = assets.Effects.blackShot:Clone()
+		blackshot.Parent = workspace
+		blackshot.CFrame = root.CFrame * CFrame.new(0, 1, -5)
+		client_fx(150, brightness, nil, .1, .3)
+		client_fx(150, cam_shake, {5, 10, 0, 1.5}, Vector3.one * 1)
+		task.wait()
+		for _,v in pairs(blackshot.Attachment:GetDescendants()) do
+			if v:IsA("ParticleEmitter") then
+				v:Emit(v:GetAttribute("EmitCount"))
+				v.EmissionDirection = Enum.NormalId.Front
+			end
+		end
+		task.delay(1, function()
+			blackshot:Destroy()
+		end)
+		task.wait()
+		hitbox2:Stop()
+		anim:GetMarkerReachedSignal("White"):Wait()
+		ammo -= 1
+		local hitbox2 = hitboxes.CreateHitbox()
+		hitbox2.Size = Vector3.new(5,5,30)
+		hitbox2.CFrame = root.CFrame * CFrame.new(0, 0, -15)
+		local params = OverlapParams.new()
+		params.FilterType = Enum.RaycastFilterType.Exclude
+		params.FilterDescendantsInstances = {character:GetChildren()}
+		hitbox2.OverlapParams = params
+		hitbox2.Touched:Connect(function(hit, hum)
+			local hit_character = hit.Parent
+			if not hit_character then return end
+			local hum = hit_character:FindFirstChildOfClass("Humanoid")
+			if not hum or hum.Health <= 0 then return end
+			local torso = hit_character:FindFirstChild("Torso") or hit_character:FindFirstChild("UpperTorso") or hit_character:FindFirstChild("HumanoidRootPart")
+			if not torso then return end
+			local hit_effect = assets.Effects.hit.Attachment:Clone()
+			hit_effect.Parent = torso
+			for _, v in pairs(hit_effect:GetDescendants()) do
+				if v:IsA("ParticleEmitter") then
+					v:Emit(v:GetAttribute("EmitCount") or 1)
+				end
+			end
+			hum:TakeDamage(8)
+			stun(hum, 0.3)
+		end)
+		hitbox2:Start()
+		local sound2 = assets.Sounds.White:Clone()
+		sound2.Parent = root
+		sound2:Play()
+		local whiteshot = assets.Effects.whiteShot:Clone()
+		whiteshot.Parent = workspace
+		whiteshot.CFrame = root.CFrame * CFrame.new(0, 1, -5)
+		client_fx(150, brightness, nil, .1, .3)
+		client_fx(150, cam_shake, {5, 10, 0, 1.5}, Vector3.one * 1)
+		task.wait()
+		task.delay(1, function()
+			whiteshot:Destroy()
+		end)
+		for _,v in pairs(whiteshot.Attachment:GetDescendants()) do
+			if v:IsA("ParticleEmitter") then
+				v:Emit(v:GetAttribute("EmitCount"))
+				v.EmissionDirection = Enum.NormalId.Front
+			end
+		end
+		hitbox2:Stop()
+		anim:GetMarkerReachedSignal("Black"):Wait()
+		ammo -= 1
+		local hitbox2 = hitboxes.CreateHitbox()
+		hitbox2.Size = Vector3.new(5,5,30)
+		hitbox2.CFrame = root.CFrame * CFrame.new(0, 0, -15)
+		local params = OverlapParams.new()
+		params.FilterType = Enum.RaycastFilterType.Exclude
+		params.FilterDescendantsInstances = {character:GetChildren()}
+		hitbox2.OverlapParams = params
+		hitbox2.Touched:Connect(function(hit, hum)
+			local hit_character = hit.Parent
+			if not hit_character then return end
+			local hum = hit_character:FindFirstChildOfClass("Humanoid")
+			if not hum or hum.Health <= 0 then return end
+			local torso = hit_character:FindFirstChild("Torso") or hit_character:FindFirstChild("UpperTorso") or hit_character:FindFirstChild("HumanoidRootPart")
+			if not torso then return end
+			local hit_effect = assets.Effects.hit.Attachment:Clone()
+			hit_effect.Parent = torso
+			for _, v in pairs(hit_effect:GetDescendants()) do
+				if v:IsA("ParticleEmitter") then
+					v:Emit(v:GetAttribute("EmitCount") or 1)
+				end
+			end
+			hum:TakeDamage(8)
+			stun(hum, 0.3)
+		end)
+		hitbox2:Start()
+		local sound1 = assets.Sounds.Black:Clone()
+		sound1.Parent = root
+		sound1:Play()
+		local blackshot = assets.Effects.blackShot:Clone()
+		blackshot.Parent = workspace
+		blackshot.CFrame = root.CFrame * CFrame.new(0, 1, -5)
+		client_fx(150, brightness, nil, .1, .3)
+		client_fx(150, cam_shake, {5, 10, 0, 1.5}, Vector3.one * 1)
+		task.wait()
+		task.delay(1, function()
+			blackshot:Destroy()
+		end)
+		for _,v in pairs(blackshot.Attachment:GetDescendants()) do
+			if v:IsA("ParticleEmitter") then
+				v:Emit(v:GetAttribute("EmitCount"))
+				v.EmissionDirection = Enum.NormalId.Front
+			end
+		end
+		hitbox2:Stop()
+		anim:GetMarkerReachedSignal("White"):Wait()
+		ammo -= 1
+		local hitbox2 = hitboxes.CreateHitbox()
+		hitbox2.Size = Vector3.new(5,5,30)
+		hitbox2.CFrame = root.CFrame * CFrame.new(0, 0, -15)
+		local params = OverlapParams.new()
+		params.FilterType = Enum.RaycastFilterType.Exclude
+		params.FilterDescendantsInstances = {character:GetChildren()}
+		hitbox2.OverlapParams = params
+		hitbox2.Touched:Connect(function(hit, hum)
+			local hit_character = hit.Parent
+			if not hit_character then return end
+			local hum = hit_character:FindFirstChildOfClass("Humanoid")
+			if not hum or hum.Health <= 0 then return end
+			local torso = hit_character:FindFirstChild("Torso") or hit_character:FindFirstChild("UpperTorso") or hit_character:FindFirstChild("HumanoidRootPart")
+			if not torso then return end
+			local hit_effect = assets.Effects.hit.Attachment:Clone()
+			hit_effect.Parent = torso
+			for _, v in pairs(hit_effect:GetDescendants()) do
+				if v:IsA("ParticleEmitter") then
+					v:Emit(v:GetAttribute("EmitCount") or 1)
+				end
+			end
+			hum:TakeDamage(8)
+			stun(hum, 0.3)
+		end)
+		hitbox2:Start()
+		local sound2 = assets.Sounds.White:Clone()
+		sound2.Parent = root
+		sound2:Play()
+		local whiteshot = assets.Effects.whiteShot:Clone()
+		whiteshot.Parent = workspace
+		whiteshot.CFrame = root.CFrame * CFrame.new(0, 1, -5)
+		client_fx(150, brightness, nil, .1, .3)
+		client_fx(150, cam_shake, {5, 10, 0, 1.5}, Vector3.one * 1)
+		task.wait()
+		task.delay(1, function()
+			whiteshot:Destroy()
+		end)
+		for _,v in pairs(whiteshot.Attachment:GetDescendants()) do
+			if v:IsA("ParticleEmitter") then
+				v:Emit(v:GetAttribute("EmitCount"))
+				v.EmissionDirection = Enum.NormalId.Front
+			end
+		end
+		hitbox2:Stop()
+		anim:GetMarkerReachedSignal("Black"):Wait()
+		ammo -= 1
+		local hitbox2 = hitboxes.CreateHitbox()
+		hitbox2.Size = Vector3.new(5,5,30)
+		hitbox2.CFrame = root.CFrame * CFrame.new(0, 0, -15)
+		local params = OverlapParams.new()
+		params.FilterType = Enum.RaycastFilterType.Exclude
+		params.FilterDescendantsInstances = {character:GetChildren()}
+		hitbox2.OverlapParams = params
+		hitbox2.Touched:Connect(function(hit, hum)
+			local hit_character = hit.Parent
+			if not hit_character then return end
+			local hum = hit_character:FindFirstChildOfClass("Humanoid")
+			if not hum or hum.Health <= 0 then return end
+			local torso = hit_character:FindFirstChild("Torso") or hit_character:FindFirstChild("UpperTorso") or hit_character:FindFirstChild("HumanoidRootPart")
+			if not torso then return end
+			local hit_effect = assets.Effects.hit.Attachment:Clone()
+			hit_effect.Parent = torso
+			for _, v in pairs(hit_effect:GetDescendants()) do
+				if v:IsA("ParticleEmitter") then
+					v:Emit(v:GetAttribute("EmitCount") or 1)
+				end
+			end
+			hum:TakeDamage(8)
+			stun(hum, 0.3)
+		end)
+		hitbox2:Start()
+		local sound1 = assets.Sounds.Black:Clone()
+		sound1.Parent = root
+		sound1:Play()
+		local blackshot = assets.Effects.blackShot:Clone()
+		blackshot.Parent = workspace
+		blackshot.CFrame = root.CFrame * CFrame.new(0, 1, -5)
+		client_fx(150, brightness, nil, .1, .3)
+		client_fx(150, cam_shake, {5, 10, 0, 1.5}, Vector3.one * 1)
+		task.wait()
+		task.delay(1, function()
+			blackshot:Destroy()
+		end)
+		for _,v in pairs(blackshot.Attachment:GetDescendants()) do
+			if v:IsA("ParticleEmitter") then
+				v:Emit(v:GetAttribute("EmitCount"))
+				v.EmissionDirection = Enum.NormalId.Front
+			end
+		end
+		task.wait()
+		hitbox2:Stop()
+		anim:GetMarkerReachedSignal("White"):Wait()
+		ammo -= 1
+		local hitbox2 = hitboxes.CreateHitbox()
+		hitbox2.Size = Vector3.new(5,5,30)
+		hitbox2.CFrame = root.CFrame * CFrame.new(0, 0, -15)
+		local params = OverlapParams.new()
+		params.FilterType = Enum.RaycastFilterType.Exclude
+		params.FilterDescendantsInstances = {character:GetChildren()}
+		hitbox2.OverlapParams = params
+		hitbox2.Touched:Connect(function(hit, hum)
+			local hit_character = hit.Parent
+			if not hit_character then return end
+			local hum = hit_character:FindFirstChildOfClass("Humanoid")
+			if not hum or hum.Health <= 0 then return end
+			local torso = hit_character:FindFirstChild("Torso") or hit_character:FindFirstChild("UpperTorso") or hit_character:FindFirstChild("HumanoidRootPart")
+			if not torso then return end
+			local hit_effect = assets.Effects.hit.Attachment:Clone()
+			hit_effect.Parent = torso
+			for _, v in pairs(hit_effect:GetDescendants()) do
+				if v:IsA("ParticleEmitter") then
+					v:Emit(v:GetAttribute("EmitCount") or 1)
+				end
+			end
+			hum:TakeDamage(8)
+			stun(hum, 0.3)
+		end)
+		hitbox2:Start()
+		local sound2 = assets.Sounds.White:Clone()
+		sound2.Parent = root
+		sound2:Play()
+		local whiteshot = assets.Effects.whiteShot:Clone()
+		whiteshot.Parent = workspace
+		whiteshot.CFrame = root.CFrame * CFrame.new(0, 1, -5)
+		client_fx(150, brightness, nil, .1, .3)
+		client_fx(150, cam_shake, {5, 10, 0, 1.5}, Vector3.one * 1)
+		task.wait()
+		task.delay(1, function()
+			whiteshot:Destroy()
+		end)
+		for _,v in pairs(whiteshot.Attachment:GetDescendants()) do
+			if v:IsA("ParticleEmitter") then
+				v:Emit(v:GetAttribute("EmitCount"))
+				v.EmissionDirection = Enum.NormalId.Front
+			end
+		end
+		task.wait()
+		hitbox2:Stop()
+		anim:GetMarkerReachedSignal("Black"):Wait()
+		ammo -= 1
+		local hitbox2 = hitboxes.CreateHitbox()
+		hitbox2.Size = Vector3.new(5,5,30)
+		hitbox2.CFrame = root.CFrame * CFrame.new(0, 0, -15)
+		local params = OverlapParams.new()
+		params.FilterType = Enum.RaycastFilterType.Exclude
+		params.FilterDescendantsInstances = {character:GetChildren()}
+		hitbox2.OverlapParams = params
+		hitbox2.Touched:Connect(function(hit, hum)
+			local hit_character = hit.Parent
+			if not hit_character then return end
+			local hum = hit_character:FindFirstChildOfClass("Humanoid")
+			if not hum or hum.Health <= 0 then return end
+			local torso = hit_character:FindFirstChild("Torso") or hit_character:FindFirstChild("UpperTorso") or hit_character:FindFirstChild("HumanoidRootPart")
+			if not torso then return end
+			local hit_effect = assets.Effects.hit.Attachment:Clone()
+			hit_effect.Parent = torso
+			for _, v in pairs(hit_effect:GetDescendants()) do
+				if v:IsA("ParticleEmitter") then
+					v:Emit(v:GetAttribute("EmitCount") or 1)
+				end
+			end
+			hum:TakeDamage(8)
+			stun(hum, 0.3)
+		end)
+		hitbox2:Start()
+		local sound1 = assets.Sounds.Black:Clone()
+		sound1.Parent = root
+		sound1:Play()
+		local blackshot = assets.Effects.blackShot:Clone()
+		blackshot.Parent = workspace
+		blackshot.CFrame = root.CFrame * CFrame.new(0, 1, -5)
+		client_fx(150, brightness, nil, .1, .3)
+		client_fx(150, cam_shake, {5, 10, 0, 1.5}, Vector3.one * 1)
+		task.wait()
+		task.delay(1, function()
+			blackshot:Destroy()
+		end)
+		for _,v in pairs(blackshot.Attachment:GetDescendants()) do
+			if v:IsA("ParticleEmitter") then
+				v:Emit(v:GetAttribute("EmitCount"))
+				v.EmissionDirection = Enum.NormalId.Front
+			end
+		end
+		task.wait()
+		hitbox2:Stop()
+		anim:GetMarkerReachedSignal("White"):Wait()
+		ammo -= 1
+		local hitbox2 = hitboxes.CreateHitbox()
+		hitbox2.Size = Vector3.new(5,5,30)
+		hitbox2.CFrame = root.CFrame * CFrame.new(0, 0, -15)
+		local params = OverlapParams.new()
+		params.FilterType = Enum.RaycastFilterType.Exclude
+		params.FilterDescendantsInstances = {character:GetChildren()}
+		hitbox2.OverlapParams = params
+		hitbox2.Touched:Connect(function(hit, hum)
+			local hit_character = hit.Parent
+			if not hit_character then return end
+			local hum = hit_character:FindFirstChildOfClass("Humanoid")
+			if not hum or hum.Health <= 0 then return end
+			local torso = hit_character:FindFirstChild("Torso") or hit_character:FindFirstChild("UpperTorso") or hit_character:FindFirstChild("HumanoidRootPart")
+			if not torso then return end
+			local hit_effect = assets.Effects.hit.Attachment:Clone()
+			hit_effect.Parent = torso
+			for _, v in pairs(hit_effect:GetDescendants()) do
+				if v:IsA("ParticleEmitter") then
+					v:Emit(v:GetAttribute("EmitCount") or 1)
+				end
+			end
+			hum:TakeDamage(8)
+			stun(hum, 0.3)
+		end)
+		hitbox2:Start()
+		local sound2 = assets.Sounds.White:Clone()
+		sound2.Parent = root
+		sound2:Play()
+		local whiteshot = assets.Effects.whiteShot:Clone()
+		whiteshot.Parent = workspace
+		whiteshot.CFrame = root.CFrame * CFrame.new(0, 1, -5)
+		client_fx(150, brightness, nil, .1, .3)
+		client_fx(150, cam_shake, {5, 10, 0, 1.5}, Vector3.one * 1)
+		task.wait()
+		task.delay(1, function()
+			whiteshot:Destroy()
+		end)
+		for _,v in pairs(whiteshot.Attachment:GetDescendants()) do
+			if v:IsA("ParticleEmitter") then
+				v:Emit(v:GetAttribute("EmitCount"))
+				v.EmissionDirection = Enum.NormalId.Front
+			end
+		end
+		task.wait()
+		hitbox2:Stop()
+		anim:GetMarkerReachedSignal("Black"):Wait()
+		ammo -= 1
+		local hitbox2 = hitboxes.CreateHitbox()
+		hitbox2.Size = Vector3.new(5,5,30)
+		hitbox2.CFrame = root.CFrame * CFrame.new(0, 0, -15)
+		local params = OverlapParams.new()
+		params.FilterType = Enum.RaycastFilterType.Exclude
+		params.FilterDescendantsInstances = {character:GetChildren()}
+		hitbox2.OverlapParams = params
+		hitbox2.Touched:Connect(function(hit, hum)
+			local hit_character = hit.Parent
+			if not hit_character then return end
+			local hum = hit_character:FindFirstChildOfClass("Humanoid")
+			if not hum or hum.Health <= 0 then return end
+			local torso = hit_character:FindFirstChild("Torso") or hit_character:FindFirstChild("UpperTorso") or hit_character:FindFirstChild("HumanoidRootPart")
+			if not torso then return end
+			local hit_effect = assets.Effects.hit.Attachment:Clone()
+			hit_effect.Parent = torso
+			for _, v in pairs(hit_effect:GetDescendants()) do
+				if v:IsA("ParticleEmitter") then
+					v:Emit(v:GetAttribute("EmitCount") or 1)
+				end
+			end
+			hum:TakeDamage(8)
+			stun(hum, 0.3)
+		end)
+		hitbox2:Start()
+		local sound1 = assets.Sounds.Black:Clone()
+		sound1.Parent = root
+		sound1:Play()
+		local blackshot = assets.Effects.blackShot:Clone()
+		blackshot.Parent = workspace
+		blackshot.CFrame = root.CFrame * CFrame.new(0, 1, -5)
+		client_fx(150, brightness, nil, .1, .3)
+		client_fx(150, cam_shake, {5, 10, 0, 1.5}, Vector3.one * 1)
+		task.wait()
+		task.delay(1, function()
+			blackshot:Destroy()
+		end)
+		for _,v in pairs(blackshot.Attachment:GetDescendants()) do
+			if v:IsA("ParticleEmitter") then
+				v:Emit(v:GetAttribute("EmitCount"))
+				v.EmissionDirection = Enum.NormalId.Front
+			end
+		end
+		task.wait()
+		hitbox2:Stop()
+		anim:GetMarkerReachedSignal("White"):Wait()
+		ammo -= 1
+		local hitbox2 = hitboxes.CreateHitbox()
+		hitbox2.Size = Vector3.new(5,5,30)
+		hitbox2.CFrame = root.CFrame * CFrame.new(0, 0, -15)
+		local params = OverlapParams.new()
+		params.FilterType = Enum.RaycastFilterType.Exclude
+		params.FilterDescendantsInstances = {character:GetChildren()}
+		hitbox2.OverlapParams = params
+		hitbox2.Touched:Connect(function(hit, hum)
+			local hit_character = hit.Parent
+			if not hit_character then return end
+			local hum = hit_character:FindFirstChildOfClass("Humanoid")
+			if not hum or hum.Health <= 0 then return end
+			local torso = hit_character:FindFirstChild("Torso") or hit_character:FindFirstChild("UpperTorso") or hit_character:FindFirstChild("HumanoidRootPart")
+			if not torso then return end
+			local hit_effect = assets.Effects.hit.Attachment:Clone()
+			hit_effect.Parent = torso
+			for _, v in pairs(hit_effect:GetDescendants()) do
+				if v:IsA("ParticleEmitter") then
+					v:Emit(v:GetAttribute("EmitCount") or 1)
+				end
+			end
+			hum:TakeDamage(8)
+			stun(hum, 0.3)
+		end)
+		hitbox2:Start()
+		local sound2 = assets.Sounds.White:Clone()
+		sound2.Parent = root
+		sound2:Play()
+		local whiteshot = assets.Effects.whiteShot:Clone()
+		whiteshot.Parent = workspace
+		whiteshot.CFrame = root.CFrame * CFrame.new(0, 1, -5)
+		client_fx(150, brightness, nil, .1, .3)
+		client_fx(150, cam_shake, {5, 10, 0, 1.5}, Vector3.one * 1)
+		task.wait()
+		task.delay(1, function()
+			whiteshot:Destroy()
+		end)
+		for _,v in pairs(whiteshot.Attachment:GetDescendants()) do
+			if v:IsA("ParticleEmitter") then
+				v:Emit(v:GetAttribute("EmitCount"))
+				v.EmissionDirection = Enum.NormalId.Front
+			end
+		end
+		hitbox2:Stop()
+		anim:GetMarkerReachedSignal("Black"):Wait()
+		ammo -= 1
+		local hitbox2 = hitboxes.CreateHitbox()
+		hitbox2.Size = Vector3.new(5,5,30)
+		hitbox2.CFrame = root.CFrame * CFrame.new(0, 0, -15)
+		local params = OverlapParams.new()
+		params.FilterType = Enum.RaycastFilterType.Exclude
+		params.FilterDescendantsInstances = {character:GetChildren()}
+		hitbox2.OverlapParams = params
+		hitbox2.Touched:Connect(function(hit, hum)
+			local hit_character = hit.Parent
+			if not hit_character then return end
+			local hum = hit_character:FindFirstChildOfClass("Humanoid")
+			if not hum or hum.Health <= 0 then return end
+			local torso = hit_character:FindFirstChild("Torso") or hit_character:FindFirstChild("UpperTorso") or hit_character:FindFirstChild("HumanoidRootPart")
+			if not torso then return end
+			local hit_effect = assets.Effects.hit.Attachment:Clone()
+			hit_effect.Parent = torso
+			for _, v in pairs(hit_effect:GetDescendants()) do
+				if v:IsA("ParticleEmitter") then
+					v:Emit(v:GetAttribute("EmitCount") or 1)
+				end
+			end
+			hum:TakeDamage(8)
+			stun(hum, 0.3)
+		end)
+		hitbox2:Start()
+		local sound1 = assets.Sounds.Black:Clone()
+		sound1.Parent = root
+		sound1:Play()
+		local blackshot = assets.Effects.blackShot:Clone()
+		blackshot.Parent = workspace
+		blackshot.CFrame = root.CFrame * CFrame.new(0, 1, -5)
+		client_fx(150, brightness, nil, .1, .3)
+		client_fx(150, cam_shake, {5, 10, 0, 1.5}, Vector3.one * 1)
+		task.wait()
+		task.delay(1, function()
+			blackshot:Destroy()
+		end)
+		for _,v in pairs(blackshot.Attachment:GetDescendants()) do
+			if v:IsA("ParticleEmitter") then
+				v:Emit(v:GetAttribute("EmitCount"))
+				v.EmissionDirection = Enum.NormalId.Front
+			end
+		end
+		hitbox2:Stop()
+		anim:GetMarkerReachedSignal("White"):Wait()
+		ammo -= 1
+		local hitbox2 = hitboxes.CreateHitbox()
+		hitbox2.Size = Vector3.new(5,5,30)
+		hitbox2.CFrame = root.CFrame * CFrame.new(0, 0, -15)
+		local params = OverlapParams.new()
+		params.FilterType = Enum.RaycastFilterType.Exclude
+		params.FilterDescendantsInstances = {character:GetChildren()}
+		hitbox2.OverlapParams = params
+		hitbox2.Touched:Connect(function(hit, hum)
+			local hit_character = hit.Parent
+			if not hit_character then return end
+			local hum = hit_character:FindFirstChildOfClass("Humanoid")
+			if not hum or hum.Health <= 0 then return end
+			local torso = hit_character:FindFirstChild("Torso") or hit_character:FindFirstChild("UpperTorso") or hit_character:FindFirstChild("HumanoidRootPart")
+			if not torso then return end
+			local hit_effect = assets.Effects.hit.Attachment:Clone()
+			hit_effect.Parent = torso
+			for _, v in pairs(hit_effect:GetDescendants()) do
+				if v:IsA("ParticleEmitter") then
+					v:Emit(v:GetAttribute("EmitCount") or 1)
+				end
+			end
+			hum:TakeDamage(8)
+			stun(hum, 0.3)
+		end)
+		hitbox2:Start()
+		local sound2 = assets.Sounds.White:Clone()
+		sound2.Parent = root
+		sound2:Play()
+		local whiteshot = assets.Effects.whiteShot:Clone()
+		whiteshot.Parent = workspace
+		whiteshot.CFrame = root.CFrame * CFrame.new(0, 1, -5)
+		client_fx(150, brightness, nil, .1, .3)
+		client_fx(150, cam_shake, {5, 10, 0, 1.5}, Vector3.one * 1)
+		task.wait()
+		task.delay(1, function()
+			whiteshot:Destroy()
+		end)
+		for _,v in pairs(whiteshot.Attachment:GetDescendants()) do
+			if v:IsA("ParticleEmitter") then
+				v:Emit(v:GetAttribute("EmitCount"))
+				v.EmissionDirection = Enum.NormalId.Front
+			end
+		end
+		hitbox2:Stop()
+		anim:GetMarkerReachedSignal("Black"):Wait()
+		ammo -= 1
+		local hitbox2 = hitboxes.CreateHitbox()
+		hitbox2.Size = Vector3.new(5,5,30)
+		hitbox2.CFrame = root.CFrame * CFrame.new(0, 0, -15)
+		local params = OverlapParams.new()
+		params.FilterType = Enum.RaycastFilterType.Exclude
+		params.FilterDescendantsInstances = {character:GetChildren()}
+		hitbox2.OverlapParams = params
+		hitbox2.Touched:Connect(function(hit, hum)
+			local hit_character = hit.Parent
+			if not hit_character then return end
+			local hum = hit_character:FindFirstChildOfClass("Humanoid")
+			if not hum or hum.Health <= 0 then return end
+			local torso = hit_character:FindFirstChild("Torso") or hit_character:FindFirstChild("UpperTorso") or hit_character:FindFirstChild("HumanoidRootPart")
+			if not torso then return end
+			local hit_effect = assets.Effects.hit.Attachment:Clone()
+			hit_effect.Parent = torso
+			for _, v in pairs(hit_effect:GetDescendants()) do
+				if v:IsA("ParticleEmitter") then
+					v:Emit(v:GetAttribute("EmitCount") or 1)
+				end
+			end
+			hum:TakeDamage(8)
+			stun(hum, 0.3)
+		end)
+		hitbox2:Start()
+		local sound1 = assets.Sounds.Black:Clone()
+		sound1.Parent = root
+		sound1:Play()
+		local blackshot = assets.Effects.blackShot:Clone()
+		blackshot.Parent = workspace
+		blackshot.CFrame = root.CFrame * CFrame.new(0, 1, -5)
+		client_fx(150, brightness, nil, .1, .3)
+		client_fx(150, cam_shake, {5, 10, 0, 1.5}, Vector3.one * 1)
+		task.wait()
+		task.delay(1, function()
+			blackshot:Destroy()
+		end)
+		for _,v in pairs(blackshot.Attachment:GetDescendants()) do
+			if v:IsA("ParticleEmitter") then
+				v:Emit(v:GetAttribute("EmitCount"))
+				v.EmissionDirection = Enum.NormalId.Front
+			end
+		end
+		hitbox2:Stop()
+		anim:GetMarkerReachedSignal("White"):Wait()
+		ammo -= 1
+		local hitbox2 = hitboxes.CreateHitbox()
+		hitbox2.Size = Vector3.new(5,5,30)
+		hitbox2.CFrame = root.CFrame * CFrame.new(0, 0, -15)
+		local params = OverlapParams.new()
+		params.FilterType = Enum.RaycastFilterType.Exclude
+		params.FilterDescendantsInstances = {character:GetChildren()}
+		hitbox2.OverlapParams = params
+		hitbox2.Touched:Connect(function(hit, hum)
+			local hit_character = hit.Parent
+			if not hit_character then return end
+			local hum = hit_character:FindFirstChildOfClass("Humanoid")
+			if not hum or hum.Health <= 0 then return end
+			local torso = hit_character:FindFirstChild("Torso") or hit_character:FindFirstChild("UpperTorso") or hit_character:FindFirstChild("HumanoidRootPart")
+			if not torso then return end
+			local hit_effect = assets.Effects.hit.Attachment:Clone()
+			hit_effect.Parent = torso
+			for _, v in pairs(hit_effect:GetDescendants()) do
+				if v:IsA("ParticleEmitter") then
+					v:Emit(v:GetAttribute("EmitCount") or 1)
+				end
+			end
+			hum:TakeDamage(8)
+			stun(hum, 0.3)
+		end)
+		hitbox2:Start()
+		local sound2 = assets.Sounds.White:Clone()
+		sound2.Parent = root
+		sound2:Play()
+		local whiteshot = assets.Effects.whiteShot:Clone()
+		whiteshot.Parent = workspace
+		whiteshot.CFrame = root.CFrame * CFrame.new(0, 1, -5)
+		client_fx(150, brightness, nil, .1, .3)
+		client_fx(150, cam_shake, {5, 10, 0, 1.5}, Vector3.one * 1)
+		task.wait()
+		task.delay(1, function()
+			whiteshot:Destroy()
+		end)
+		for _,v in pairs(whiteshot.Attachment:GetDescendants()) do
+			if v:IsA("ParticleEmitter") then
+				v:Emit(v:GetAttribute("EmitCount"))
+				v.EmissionDirection = Enum.NormalId.Front
+			end
+		end
+		hitbox2:Stop()
+		anim:GetMarkerReachedSignal("Black"):Wait()
+		ammo -= 1
+		local hitbox2 = hitboxes.CreateHitbox()
+		hitbox2.Size = Vector3.new(5,5,30)
+		hitbox2.CFrame = root.CFrame * CFrame.new(0, 0, -15)
+		local params = OverlapParams.new()
+		params.FilterType = Enum.RaycastFilterType.Exclude
+		params.FilterDescendantsInstances = {character:GetChildren()}
+		hitbox2.OverlapParams = params
+		hitbox2.Touched:Connect(function(hit, hum)
+			local hit_character = hit.Parent
+			if not hit_character then return end
+			local hum = hit_character:FindFirstChildOfClass("Humanoid")
+			if not hum or hum.Health <= 0 then return end
+			local torso = hit_character:FindFirstChild("Torso") or hit_character:FindFirstChild("UpperTorso") or hit_character:FindFirstChild("HumanoidRootPart")
+			if not torso then return end
+			local hit_effect = assets.Effects.hit.Attachment:Clone()
+			hit_effect.Parent = torso
+			for _, v in pairs(hit_effect:GetDescendants()) do
+				if v:IsA("ParticleEmitter") then
+					v:Emit(v:GetAttribute("EmitCount") or 1)
+				end
+			end
+			hum:TakeDamage(8)
+			stun(hum, 0.3)
+		end)
+		hitbox2:Start()
+		local sound1 = assets.Sounds.Black:Clone()
+		sound1.Parent = root
+		sound1:Play()
+		local blackshot = assets.Effects.blackShot:Clone()
+		blackshot.Parent = workspace
+		blackshot.CFrame = root.CFrame * CFrame.new(0, 1, -5)
+		client_fx(150, brightness, nil, .1, .3)
+		client_fx(150, cam_shake, {5, 10, 0, 1.5}, Vector3.one * 1)
+		task.wait()
+		task.delay(1, function()
+			blackshot:Destroy()
+		end)
+		for _,v in pairs(blackshot.Attachment:GetDescendants()) do
+			if v:IsA("ParticleEmitter") then
+				v:Emit(v:GetAttribute("EmitCount"))
+				v.EmissionDirection = Enum.NormalId.Front
+			end
+		end
+		hitbox2:Stop()
+		anim:GetMarkerReachedSignal("End"):Wait()
+		ammo -= 1
+		print("End")
+		local hitbox2 = hitboxes.CreateHitbox()
+		hitbox2.Size = Vector3.new(5,5,30)
+		hitbox2.CFrame = root.CFrame * CFrame.new(0, 0, -15)
+		local params = OverlapParams.new()
+		params.FilterType = Enum.RaycastFilterType.Exclude
+		params.FilterDescendantsInstances = {character:GetChildren()}
+		hitbox2.OverlapParams = params
+		hitbox2.Touched:Connect(function(hit, hum)
+			local hit_character = hit.Parent
+			if not hit_character then return end
+			local hum = hit_character:FindFirstChildOfClass("Humanoid")
+			if not hum or hum.Health <= 0 then return end
+			local torso = hit_character:FindFirstChild("Torso") or hit_character:FindFirstChild("UpperTorso") or hit_character:FindFirstChild("HumanoidRootPart")
+			if not torso then return end
+			local hit_effect = assets.Effects.hit.Attachment:Clone()
+			hit_effect.Parent = torso
+			for _, v in pairs(hit_effect:GetDescendants()) do
+				if v:IsA("ParticleEmitter") then
+					v:Emit(v:GetAttribute("EmitCount") or 1)
+				end
+			end
+			hum:TakeDamage(12)
+			stun(hum, 0.5)
+		end)
+		hitbox2:Start()
+		local sound1 = assets.Sounds.Black:Clone()
+		sound1.Parent = root
+		sound1:Play()
+		local blackshot = assets.Effects.blackShot:Clone()
+		blackshot.Parent = workspace
+		blackshot.CFrame = root.CFrame * CFrame.new(0, 1, -5)
+		client_fx(150, brightness, nil, .1, .3)
+		client_fx(150, cam_shake, {5, 10, 0, 1.5}, Vector3.one * 1)
+		task.wait()
+		for _,v in pairs(blackshot.Attachment:GetDescendants()) do
+			if v:IsA("ParticleEmitter") then
+				v:Emit(v:GetAttribute("EmitCount"))
+				v.EmissionDirection = Enum.NormalId.Front
+			end
+		end
+		task.delay(1, function()
+			blackshot:Destroy()
+		end)
+		task.wait()
+		hitbox2:Stop()
+		print("yes")
+	elseif action == "clash" then
+		if debounce then return end  
+		debounce = true  
+		local anim = animator.new()
+		anim:setAnimation(require(animations.counter2))
+		anim:setRig(character)
+		anim:AdjustWeight(1)
+		anim.Looped = false
+		anim:Play()
+		humanoid.WalkSpeed = 0
+		local parry_active = true
+		task.delay(2, function()
+			parry_active = false
+			humanoid.WalkSpeed = 25
+		end)
+		if humanoid then
+			local original = humanoid.Health
+			local startTime = tick()
+			while parry_active and tick() - startTime < 0.5 do
+				task.wait()
+				if humanoid.Health < original then
+					anim:Stop()
+					local force = Instance.new("ForceField")
+					force.Visible = false
+					force.Parent = character
+					task.delay(1, function()
+						force:Destroy()
+					end)
+					client_fx(150, brightness, Color3.fromRGB(255, 144, 47), -0.2, 1)
+					client_fx(150, cam_shake, {5, 30, -5, 10}, Vector3.one * 3)
+					camerastuff.TweenFOV({player, nil}, 50, {Length = 0.001, EasingStyle = "Cubic", EasingDirection = "Out", RepeatCount = 0, Reverses = false, DelayTime = 0}, true)
+					local clash = Instance.new("Sound")
+					clash.Name = "clash"
+					clash.Volume = 2
+					clash.SoundId = "rbxassetid://199149338"
+					clash.Parent = root
+					clash:Play()
+					task.delay(2, function()
+						clash:Destroy()
+					end)
+					local parryfx = assets.Effects.Parry:Clone()
+					parryfx.Parent = workspace
+					parryfx.CFrame = root.CFrame * CFrame.new(0, 1, -2)
+					task.wait()
+					for _,v in pairs(parryfx.Attachment:GetDescendants()) do
+						if v:IsA("ParticleEmitter") then
+							v:Emit(v:GetAttribute("EmitCount"))
+							v.EmissionDirection = Enum.NormalId.Top
+						end
+					end
+					task.delay(2, function()
+						parryfx:Destroy()
+					end)
+					local radius = 100
+					local force = 250
+					local knockbackDuration = 0.3
+
+					local function ye(hrp)
+						local direction = (hrp.Position - root.Position).Unit
+						local bodyPos = Instance.new("BodyPosition")
+						bodyPos.Position = hrp.Position + direction * force
+						bodyPos.MaxForce = Vector3.new(1e5, 1e5, 1e5)
+						bodyPos.P = 5_000
+						bodyPos.D = 500
+						bodyPos.Parent = hrp
+
+						task.delay(knockbackDuration, function()
+							bodyPos:Destroy()
+						end)
+					end
+
+					for _, enemy in pairs(game:GetService("Players"):GetPlayers()) do
+						if enemy ~= player and enemy.Character and enemy.Character:FindFirstChild("HumanoidRootPart") then
+							local enemyHRP = enemy.Character.HumanoidRootPart
+							local distance = (enemyHRP.Position - root.Position).Magnitude
+							if distance <= radius then
+								ye(enemyHRP)
+							end
+						end
+					end
+
+					for _, npc in pairs(workspace:GetChildren()) do
+						if npc:IsA("Model") and npc:FindFirstChild("Humanoid") and npc:FindFirstChild("HumanoidRootPart") then
+							local npcHRP = npc.HumanoidRootPart
+							local distance = (npcHRP.Position - root.Position).Magnitude
+							if distance <= radius then
+								ye(npcHRP)
+							end
+						end
+					end
+					local parry = animator.new()
+					parry:setAnimation(require(animations.reload_1))
+					parry:setRig(character)
+					parry:AdjustWeight(2)
+					parry.Looped = false
+					parry:Play()
+					humanoid.WalkSpeed = 25
+					break
+				end
+			end
+		end
+		task.wait(1)
+		debounce = false
+	elseif action == "sorrow_in_you" then
+		if ammo == 0 then return end
+		ego = math.max(ego - 45, 0)
+		debounce = true
+		humanoid.WalkSpeed = 0
+		local bv = Instance.new("BodyVelocity")
+		bv.MaxForce = Vector3.new(1e5, 0, 1e5)
+		bv.Velocity = root.CFrame.LookVector * 120
+		bv.Parent = root
+		local anim = animator.new()
+		anim:setAnimation(require(animations.sorrow_in_you))
+		anim:setRig(character)
+		anim:AdjustWeight(2)
+		anim.Looped = false
+		anim:Play()
+		game.Debris:AddItem(bv, 0.1)
+		anim:GetMarkerReachedSignal("start"):Wait()
+		humanoid.AutoRotate = false
+		local swing = assets.Effects.black_swing:Clone()
+		swing.Parent = workspace
+		swing.CFrame = blackgun.CFrame * CFrame.new(0, 0.1, 3)
+		task.wait()
+		for _,v in pairs(swing.Attachment2:GetDescendants()) do
+			if v:IsA("ParticleEmitter") then
+				v:Emit(v:GetAttribute("EmitCount"))
+				v.EmissionDirection = Enum.NormalId.Top
+			end
+		end
+		local hitbox2 = hitboxes.CreateHitbox()
+		hitbox2.Size = Vector3.new(5,5,60)
+		hitbox2.CFrame = root.CFrame * CFrame.new(0, 0, -30)
+		local params = OverlapParams.new()
+		params.FilterType = Enum.RaycastFilterType.Exclude
+		params.FilterDescendantsInstances = {character:GetChildren()}
+		hitbox2.OverlapParams = params
+		hitbox2.Touched:Connect(function(hit, hum)
+			local hit_character = hit.Parent
+			if not hit_character then return end
+			local hum = hit_character:FindFirstChildOfClass("Humanoid")
+			if not hum or hum.Health <= 0 then return end
+			local torso = hit_character:FindFirstChild("Torso") or hit_character:FindFirstChild("UpperTorso")
+			if not torso then return end
+			local hit_effect = assets.Effects.hit.Attachment:Clone()
+			hit_effect.Parent = torso
+			for _, v in pairs(hit_effect:GetDescendants()) do
+				if v:IsA("ParticleEmitter") then
+					v:Emit(v:GetAttribute("EmitCount") or 1)
+				end
+			end
+			hum:TakeDamage(5)
+			stun(hum, 0.8)
+		end)
+		hitbox2:Start()
+		local sound1 = assets.Sounds.Black:Clone()
+		sound1.Parent = root
+		sound1:Play()
+		local blackshot = assets.Effects.blackShot:Clone()
+		blackshot.Parent = workspace
+		blackshot.CFrame = root.CFrame * CFrame.new(0, 1, -8)
+		client_fx(150, brightness, nil, .1, 1)
+		client_fx(150, cam_shake, {5, 10, 0, 1.5}, Vector3.one * 2)
+		camerastuff.TweenFOV({player, nil}, 40, {Length = 0.001, EasingStyle = "Sine", EasingDirection = "Out", RepeatCount = 0, Reverses = false, DelayTime = 0}, true)
+		task.wait()
+		hitbox2:Stop()
+		for _,v in pairs(blackshot.Attachment:GetDescendants()) do
+			if v:IsA("ParticleEmitter") then
+				v:Emit(v:GetAttribute("EmitCount"))
+				v.EmissionDirection = Enum.NormalId.Front
+			end
+		end
+		task.delay(1, function()
+			blackshot:Destroy()
+		end)
+		anim:GetMarkerReachedSignal("1"):Wait()
+		anim:GetMarkerReachedSignal("2"):Wait()
+		local swing = assets.Effects.up_swing:Clone()
+		swing.Parent = workspace
+		swing.CFrame = root.CFrame
+		task.wait()
+		for _,v in pairs(swing.Attachment1:GetDescendants()) do
+			if v:IsA("ParticleEmitter") then
+				v:Emit(v:GetAttribute("EmitCount"))
+			end
+		end
+		task.wait()
+		for _,v in pairs(swing.Attachment2:GetDescendants()) do
+			if v:IsA("ParticleEmitter") then
+				v:Emit(v:GetAttribute("EmitCount"))
+			end
+		end
+		task.delay(1, function()
+			swing:Destroy()
+		end)
+		local bv = Instance.new("BodyVelocity")
+		bv.MaxForce = Vector3.new(1e7, 1e7, 1e7)
+		bv.Velocity = root.CFrame.LookVector * -20
+		bv.Parent = root
+		humanoid.AutoRotate = true
+		anim:GetMarkerReachedSignal("3"):Once(function()
+			game.Debris:AddItem(bv, 0.1)
+			local sound1 = assets.Sounds.Black:Clone()
+			sound1.Parent = root
+			sound1:Play()
+			client_fx(150, brightness, nil, .1, 1)
+			client_fx(150, cam_shake, {5, 10, 0, 1.5}, Vector3.one * 2)
+			camerastuff.TweenFOV({player, nil}, 85, {Length = 0.3, EasingStyle = "Quint", EasingDirection = "Out", RepeatCount = 0, Reverses = false, DelayTime = 0}, false)
+			task.wait()
+			humanoid.AutoRotate = false
+			for v = 1, 13 do
+				task.wait(0.065)
+				local hitbox2 = hitboxes.CreateHitbox()
+				hitbox2.Size = Vector3.new(5,5,60)
+				hitbox2.CFrame = root.CFrame * CFrame.new(0, 0, -40)
+				local params = OverlapParams.new()
+				params.FilterType = Enum.RaycastFilterType.Exclude
+				params.FilterDescendantsInstances = {character:GetChildren()}
+				hitbox2.OverlapParams = params
+				hitbox2.Touched:Connect(function(hit, hum)
+					local hit_character = hit.Parent
+					if not hit_character then return end
+					local hum = hit_character:FindFirstChildOfClass("Humanoid")
+					if not hum or hum.Health <= 0 then return end
+					local torso = hit_character:FindFirstChild("Torso") or hit_character:FindFirstChild("UpperTorso")
+					if not torso then return end
+					local hit_effect = assets.Effects.hit.Attachment:Clone()
+					hit_effect.Parent = torso
+					for _, v in pairs(hit_effect:GetDescendants()) do
+						if v:IsA("ParticleEmitter") then
+							v:Emit(v:GetAttribute("EmitCount") or 1)
+						end
+					end
+					hum:TakeDamage(3)
+					stun(hum, 0.5)
+				end)
+				hitbox2:Start()
+				local sound1 = assets.Sounds.White:Clone()
+				sound1.Parent = root
+				sound1:Play()
+				local sound2 = assets.Sounds.Black:Clone()
+				sound2.Parent = root
+				sound2:Play()
+				local twoshot = assets.Effects.whiteBShot:Clone()
+				twoshot.Parent = workspace
+				twoshot.CFrame = root.CFrame * CFrame.new(0, 1, -5)
+				client_fx(150, brightness, nil, .1, .3)
+				client_fx(150, cam_shake, {5, 10, 0, 1.5}, Vector3.one * 1)
+				task.wait()
+				task.delay(1, function()
+					twoshot:Destroy()
+				end)
+				for _,v in pairs(twoshot.Attachmentb:GetDescendants()) do
+					if v:IsA("ParticleEmitter") then
+						v:Emit(v:GetAttribute("EmitCount"))
+					end
+				end
+				task.wait()
+				hitbox2:Stop()
+				for _,v in pairs(twoshot.Attachmentw:GetDescendants()) do
+					if v:IsA("ParticleEmitter") then
+						v:Emit(v:GetAttribute("EmitCount"))
+					end
+				end
+			end
+		end)
+		anim:GetMarkerReachedSignal("4"):Once(function()
+			local swing = assets.Effects.up_swing:Clone()
+			swing.Parent = workspace
+			swing.CFrame = root.CFrame
+			task.wait()
+			task.delay(1, function()
+				swing:Destroy()
+			end)
+			for _,v in pairs(swing.Attachment1:GetDescendants()) do
+				if v:IsA("ParticleEmitter") then
+					v:Emit(v:GetAttribute("EmitCount"))
+				end
+			end
+			task.wait()
+			for _,v in pairs(swing.Attachment2:GetDescendants()) do
+				if v:IsA("ParticleEmitter") then
+					v:Emit(v:GetAttribute("EmitCount"))
+				end
+			end
+			camerastuff.TweenFOV({player, nil}, 60, {Length = 0.3, EasingStyle = "Quint", EasingDirection = "Out", RepeatCount = 0, Reverses = false, DelayTime = 0}, false)
+		end)
+		anim:GetMarkerReachedSignal("5"):Once(function()
+			local sound1 = assets.Sounds.Black:Clone()
+			sound1.Parent = root
+			sound1:Play()
+			local sound2 = assets.Sounds.White:Clone()
+			sound2.Parent = root
+			sound2:Play()
+			client_fx(150, brightness, nil, .4, 1)
+			client_fx(150, cam_shake, {5, 10, 0, 1.5}, Vector3.one * 2)
+			camerastuff.TweenFOV({player, nil}, 85, {Length = 0.3, EasingStyle = "Quint", EasingDirection = "Out", RepeatCount = 0, Reverses = false, DelayTime = 0}, false)
+			task.wait()
+			for v = 1, 18 do
+				task.wait(0.065)
+				local hitbox2 = hitboxes.CreateHitbox()
+				hitbox2.Size = Vector3.new(5,5,60)
+				hitbox2.CFrame = root.CFrame * CFrame.new(0, 0, -40)
+				local params = OverlapParams.new()
+				params.FilterType = Enum.RaycastFilterType.Exclude
+				params.FilterDescendantsInstances = {character:GetChildren()}
+				hitbox2.OverlapParams = params
+				hitbox2.Touched:Connect(function(hit, hum)
+					local hit_character = hit.Parent
+					if not hit_character then return end
+					local hum = hit_character:FindFirstChildOfClass("Humanoid")
+					if not hum or hum.Health <= 0 then return end
+					local torso = hit_character:FindFirstChild("Torso") or hit_character:FindFirstChild("UpperTorso")
+					if not torso then return end
+					local hit_effect = assets.Effects.hit.Attachment:Clone()
+					hit_effect.Parent = torso
+					for _, v in pairs(hit_effect:GetDescendants()) do
+						if v:IsA("ParticleEmitter") then
+							v:Emit(v:GetAttribute("EmitCount") or 1)
+						end
+					end
+					hum:TakeDamage(3)
+					stun(hum, 0.5)
+				end)
+				hitbox2:Start()
+				local sound1 = assets.Sounds.White:Clone()
+				sound1.Parent = root
+				sound1:Play()
+				local sound2 = assets.Sounds.Black:Clone()
+				sound2.Parent = root
+				sound2:Play()
+				local twoshot = assets.Effects.whiteBShot:Clone()
+				twoshot.Parent = workspace
+				twoshot.CFrame = root.CFrame * CFrame.new(0, 1, -5)
+				client_fx(150, brightness, nil, .1, .3)
+				client_fx(150, cam_shake, {5, 10, 0, 1.5}, Vector3.one * 1)
+				task.wait()
+				task.delay(1, function()
+					twoshot:Destroy()
+				end)
+				for _,v in pairs(twoshot.Attachmentb:GetDescendants()) do
+					if v:IsA("ParticleEmitter") then
+						v:Emit(v:GetAttribute("EmitCount"))
+					end
+				end
+				task.wait()
+				hitbox2:Stop()
+				for _,v in pairs(twoshot.Attachmentw:GetDescendants()) do
+					if v:IsA("ParticleEmitter") then
+						v:Emit(v:GetAttribute("EmitCount"))
+					end
+				end
+			end
+		end)
+		anim:GetMarkerReachedSignal("6"):Once(function()
+			camerastuff.TweenFOV({player, nil}, 120, {Length = 0.01, EasingStyle = "Quint", EasingDirection = "Out", RepeatCount = 0, Reverses = false, DelayTime = 0}, true)
+			local bv = Instance.new("BodyVelocity")
+			bv.MaxForce = Vector3.new(1e7, 1e7, 1e7)
+			bv.Velocity = root.CFrame.LookVector * 100
+			bv.Parent = root
+			task.wait(0.2)
+			game.Debris:AddItem(bv, 0.1)
+		end)
+		anim:GetMarkerReachedSignal("7"):Once(function()
+			humanoid.AutoRotate = false
+			client_fx(150, impact, 1)
+			client_fx(150, brightness, nil, 1, 1)
+			client_fx(150, cam_shake, {5, 10, 0, 2}, Vector3.one * 5)
+			camerastuff.TweenFOV({player, nil}, 90, {Length = 1.5, EasingStyle = "Sine", EasingDirection = "Out", RepeatCount = 0, Reverses = false, DelayTime = 0}, true)
+			local sound1 = Instance.new("Sound")
+			sound1.Name = "magic-cast-heavy11"
+			sound1.Volume = 4
+			sound1.SoundId = "rbxassetid://4299584756"
+			sound1.Parent = root
+			sound1:Play()
+			local ending = assets.Effects.endShot:Clone()
+			ending.Parent = workspace
+			client_fx(50, cam_shake, {5, 30, -5, 10}, Vector3.one * 10)
+			for v = 1, 16 do
+				task.wait(0.065)
+				ending.CFrame = root.CFrame
+				local hitbox2 = hitboxes.CreateHitbox()
+				hitbox2.Size = Vector3.new(30, 30, 30)
+				hitbox2.CFrame = root.CFrame
+				local params = OverlapParams.new()
+				params.FilterType = Enum.RaycastFilterType.Exclude
+				params.FilterDescendantsInstances = {character:GetChildren()}
+				hitbox2.OverlapParams = params
+				hitbox2.Touched:Connect(function(hit, hum)
+					local hit_character = hit.Parent
+					if not hit_character then return end
+					local hum = hit_character:FindFirstChildOfClass("Humanoid")
+					if not hum or hum.Health <= 0 then return end
+					local torso = hit_character:FindFirstChild("Torso") or hit_character:FindFirstChild("UpperTorso")
+					if not torso then return end
+					local hit_effect = assets.Effects.hit.Attachment:Clone()
+					hit_effect.Parent = torso
+					for _, v in pairs(hit_effect:GetDescendants()) do
+						if v:IsA("ParticleEmitter") then
+							v:Emit(v:GetAttribute("EmitCount") or 1)
+						end
+					end
+					hum:TakeDamage(3)
+					stun(hum, 0.8)
+				end)
+				hitbox2:Start()
+				for _,v in pairs(ending.Attachmentyay:GetDescendants()) do
+					if v:IsA("ParticleEmitter") then
+						v:Emit(v:GetAttribute("EmitCount"))
+					end
+				end
+				task.wait()
+				task.delay(3, function()
+					ending:Destroy()
+				end)
+				hitbox2:Stop()
+				for _,v in pairs(ending.Attachmentyay2:GetDescendants()) do
+					if v:IsA("ParticleEmitter") then
+						v:Emit(v:GetAttribute("EmitCount"))
+					end
+				end
+			end
+		end)
+		anim:GetMarkerReachedSignal("8"):Once(function()
+			camerastuff.TweenFOV({player, nil}, 40, {Length = 0.01, EasingStyle = "Sine", EasingDirection = "Out", RepeatCount = 0, Reverses = false, DelayTime = 0}, true)
+			client_fx(150, brightness, nil, 1, 1)
+			client_fx(150, cam_shake, {5, 10, 0, 3}, Vector3.one * 3)
+			local ending = assets.Effects.sorrow_end:Clone()
+			ending.Parent = workspace
+			ending.CFrame = root.CFrame
+			task.wait()
+			for _, v in pairs(ending:GetDescendants()) do
+				if v:IsA("ParticleEmitter") then
+					v:Emit(v:GetAttribute("EmitCount") or 1)
+				end
+			end
+			local sound1 = Instance.new("Sound")
+			sound1.Name = "jingle5"
+			sound1.Volume = 4
+			sound1.SoundId = "rbxassetid://4307069862"
+			sound1.Parent = root
+			sound1:Play()
+			task.wait(1)
+			debounce = false
+			humanoid.WalkSpeed = 25
+			humanoid.AutoRotate = true
+		end)
+	elseif action == "ego" then
+		if ego <= 10 and ammo <= 30 then
+			print("not enough")
+		else
+			debounce = true
+			if ego >= max_ego then
+				for _, v in pairs(character:GetChildren()) do
+					if v:IsA("Shirt") then
+						print("yes")
+						leftarm["Left Arm"].Color = character["Left Arm"].Color
+						rightarm["Right Arm"].Color = character["Right Arm"].Color
+						middlearm["Left Arm"].Color = character["Torso"].Color
+						local clonedShirt = v:Clone()
+						clonedShirt.Parent = leftarm
+						clonedShirt:Clone().Parent = rightarm
+						clonedShirt:Clone().Parent = middlearm
+					end
+				end
+				ego = 0
+				local victim = nil
+				local anim = animator.new()
+				anim:setAnimation(require(animations.egostart))
+				anim:setRig(character)
+				anim:AdjustWeight(2)
+				anim.Looped = false
+				anim:Play()
+				anim:GetMarkerReachedSignal("Hit"):Wait()
+				local shoot = assets.Effects.solemn_white:Clone()
+				shoot.Parent = workspace
+				shoot.CFrame = root.CFrame * CFrame.new(0, 0, -50)
+				task.wait()
+				task.delay(2, function()
+					shoot:Destroy()
+				end)
+				for _, v in pairs(shoot:GetDescendants()) do
+					if v:IsA("ParticleEmitter") then
+						v:Emit(v:GetAttribute("EmitCount") or 1)
+					end
+				end
+				local hitbox1 = Instance.new("Part", workspace)
+				hitbox1.Name = "Hitbox"
+				hitbox1.Anchored = true
+				hitbox1.Size = Vector3.new(5, 5, 40)
+				hitbox1.CanCollide = false
+				hitbox1.Transparency = 0
+				hitbox1.CFrame = root.CFrame * CFrame.new(0, 0, -25)
+				local params = OverlapParams.new()
+				params.FilterType = Enum.RaycastFilterType.Exclude
+				params.FilterDescendantsInstances = {character}
+				task.wait(0.025)
+				hitbox1:Destroy()
+				local hitParts = workspace:GetPartsInPart(hitbox1, params)
+				for _, part in ipairs(hitParts) do
+					local humanoid = part.Parent:FindFirstChildOfClass("Humanoid")
+					if humanoid and humanoid.Parent ~= character then
+						victim = humanoid.Parent
+						print("Hit:", victim.Name)
+						local hit_effect = assets.Effects.hit.Attachment:Clone()
+						hit_effect.Parent = victim.Torso
+						for _, v in pairs(hit_effect:GetDescendants()) do
+							if v:IsA("ParticleEmitter") then
+								v:Emit(v:GetAttribute("EmitCount") or 1)
+							end
+						end
+						humanoid:TakeDamage(2)
+						stun(humanoid, 13)
+						break
+					end
+				end
+				if not victim then
+					print("none")
+					client_fx(200, brightness, nil, 1, 0.9)
+					client_fx(200, cam_shake, {5, 10, 0, 3}, Vector3.one * 3)
+				else
+					debounce = true
+					root.Anchored = true
+					local victimPlayer = game.Players:GetPlayerFromCharacter(victim)
+					local function cutscene(targets: {Player})
+						if not targets then return end
+						for _, player in pairs(targets) do
+							if player and player:FindFirstChild("PlayerGui") then
+								local cutscene = assets.Animations.CameraAnimations.Funeral.Camera:Clone()
+								cutscene.Enabled = true
+								cutscene.Origin.Value = root.CFrame
+								cutscene.Parent = player.PlayerGui
+								game:GetService("Debris"):AddItem(cutscene, 15)
+							end
+						end
+					end
+					brightness(player, nil, 1, 0.9)
+					cam_shake(player, {10, 10, 0, 10}, Vector3.one * 0.9)
+					camerastuff.TweenFOV({player}, 20, {Length = 0.9, EasingStyle = "Sine", EasingDirection = "Out", RepeatCount = 0, Reverses = false, DelayTime = 0}, true)
+				
+					if victimPlayer then
+						brightness(victimPlayer, nil, 1, 0.9)
+						cam_shake(victimPlayer, {10, 10, 0, 10}, Vector3.one * 0.9)
+						camerastuff.TweenFOV({victimPlayer}, 20, {Length = 0.9, EasingStyle = "Sine", EasingDirection = "Out", RepeatCount = 0, Reverses = false, DelayTime = 0}, true)
+					end
+					task.wait(0.9)
+					local stunanim = animator.new()
+					stunanim:setAnimation(require(animations.hit))
+					stunanim:setRig(victim)
+					stunanim:AdjustWeight(7)
+					stunanim.Looped = true
+					stunanim:Play()
+					local hit_vic_torso = victim:FindFirstChild("Torso") or victim:FindFirstChild("UpperTorso") or victim:FindFirstChild("HumanoidRootPart")
+					local hit_vic_hum = victim:FindFirstChild("Humanoid")
+					hit_vic_torso.CFrame = root.CFrame * CFrame.new(0,0, -35)
+					hit_vic_hum.AutoRotate = false
+					hit_vic_torso.CFrame = CFrame.lookAt(victim.HumanoidRootPart.Position,root.Position)
+					hit_vic_torso.Anchored = true
+					humanoid.AutoRotate = false
+					local ego = animator.new()
+					ego:setAnimation(require(animations.funeral))
+					ego:setRig(character)
+					ego:AdjustWeight(1)
+					ego.Looped = false
+
+					root.Anchored = true
+					root.CFrame = CFrame.lookAt(root.Position, hit_vic_torso.Position)
+
+					anim:Stop()
+					client_fx(50, brightness, nil, 1, 1)
+					ego:Play()
+					cutscene({player, victimPlayer})
+					egobar.Enabled = false
+					funeral_head.Parent = storage
+					coffin2.Parent = game.TestService
+					coffin.Parent = character
+					leftarm.Parent = character
+					rightarm.Parent = character
+					middlearm.Parent = character
+					leftarm["Left Arm"].Transparency = 0
+					rightarm["Right Arm"].Transparency = 0
+					middlearm["Left Arm"].Transparency = 0
+					whitegun.Transparency = 1
+					blackgun.Transparency = 1
+					ego:GetMarkerReachedSignal("1"):Wait()
+					local body_collapse01 = Instance.new("Sound")
+					body_collapse01.Name = "body-collapse01"
+					body_collapse01.Volume = 2
+					body_collapse01.SoundId = "rbxassetid://2609993518"
+					body_collapse01.Parent = character["Right Leg"]
+					body_collapse01:Play()
+					ego:GetMarkerReachedSignal("2"):Wait()
+					local body_collapse01 = Instance.new("Sound")
+					body_collapse01.Name = "body-collapse01"
+					body_collapse01.Volume = 2
+					body_collapse01.SoundId = "rbxassetid://4086035815"
+					body_collapse01.Parent = root
+					body_collapse01:Play()
+					local body_collapse02 = Instance.new("Sound")
+					body_collapse02.Name = "body-collapse01"
+					body_collapse02.Volume = 2
+					body_collapse02.SoundId = "rbxassetid://182306090"
+					body_collapse02.Parent = root
+					body_collapse02:Play()
+					ego:GetMarkerReachedSignal("3"):Wait()
+					local body_collapse01 = Instance.new("Sound")
+					body_collapse01.Name = "body-collapse01"
+					body_collapse01.Volume = 2
+					body_collapse01.SoundId = "rbxassetid://5137964328"
+					body_collapse01.Parent = root
+					body_collapse01:Play()
+					ego:GetMarkerReachedSignal("4"):Wait()
+					local body_collapse01 = Instance.new("Sound")
+					body_collapse01.Name = "body-collapse01"
+					body_collapse01.Volume = 2
+					body_collapse01.SoundId = "rbxassetid://3908308607"
+					body_collapse01.Parent = root
+					body_collapse01:Play()
+					ego:GetMarkerReachedSignal("5"):Wait()
+					local body_collapse01 = Instance.new("Sound")
+					body_collapse01.Name = "body-collapse01"
+					body_collapse01.Volume = 2
+					body_collapse01.SoundId = "rbxassetid://9125626784"
+					body_collapse01.PlaybackSpeed = 1.2
+					body_collapse01.Parent = root
+					body_collapse01:Play()
+					local down_particles = assets.Effects.coffinDown:Clone()
+					down_particles.Parent = workspace
+					down_particles.CFrame = coffin.Open.CFrame
+					task.wait()
+					task.delay(1, function()
+						down_particles:Destroy()
+					end)
+					for _,v in pairs(down_particles:GetDescendants()) do
+						if v:IsA("ParticleEmitter") then
+							v:Emit(v:GetAttribute("EmitCount"))
+						end
+					end
+					ego:GetMarkerReachedSignal("6"):Wait()
+					local body_collapse01 = Instance.new("Sound")
+					body_collapse01.Name = "body-collapse01"
+					body_collapse01.Volume = 2
+					body_collapse01.SoundId = "rbxassetid://1843023345"
+					--body_collapse01.PlaybackSpeed = 1.2
+					body_collapse01.Parent = root
+					body_collapse01:Play()
+					butterfly(player, "White", 2)
+					butterfly(player, "Black", 2)
+					if victimPlayer then
+						butterfly(victimPlayer, "White", 2)
+						butterfly(victimPlayer, "Black", 2)
+					end
+					local sound1 = assets.Sounds.White:Clone()
+					sound1.Parent = root
+					sound1:Play()
+					local sound2 = assets.Sounds.Black:Clone()
+					sound2.Parent = root
+					sound2:Play()
+					local final = Instance.new("Sound")
+					final.Name = "idk lol"
+					final.Volume = 5
+					final.SoundId = "rbxassetid://1843023345"
+					--body_collapse01.PlaybackSpeed = 1.2
+					final.Parent = root
+					final:Play()
+					local funeral_shpt = assets.Effects.funeral_shot:Clone()
+					funeral_shpt.Parent = workspace
+					funeral_shpt.CFrame = root.CFrame * CFrame.new(0, 1, -47)
+					task.wait()
+					task.delay(3, function()
+						funeral_shpt:Destroy()
+					end)
+					for _,v in pairs(funeral_shpt:GetDescendants()) do
+						if v:IsA("ParticleEmitter") then
+							v.Enabled = true
+						end
+					end
+					for i = 1,60 do
+						task.wait(0.025)
+						if victim.Humanoid.Health - 5 <= 0 then
+							victim.Humanoid.Health = 1
+						else
+							victim.Humanoid:TakeDamage(5)
+						end
+					end
+					ego:GetMarkerReachedSignal("7"):Once(function()
+						--ego.Speed = 1.1
+						for _,v in pairs(funeral_shpt:GetDescendants()) do
+							if v:IsA("ParticleEmitter") then
+								v.Enabled = false
+							end
+						end
+						local fade = assets.FX.Fade:Clone()
+						fade.Parent = player.PlayerGui
+						if victimPlayer then
+							local fade2 =  assets.FX.Fade:Clone()
+							fade2.Parent = victimPlayer.PlayerGui
+						end
+						local idleflies = assets.Effects.idle_butterflies:Clone()
+						idleflies.Parent = workspace
+						idleflies.CFrame = root.CFrame
+						for _,v in pairs(idleflies:GetChildren()) do
+							if v:IsA("ParticleEmitter") then
+								v:Emit(v:GetAttribute("EmitCount") or 1)
+							end
+						end
+						local charge = Instance.new("Sound")
+						charge.Name = "Bell Toll"
+						charge.Volume = 3
+						charge.SoundId = "rbxassetid://9058393493"
+						charge.PlaybackSpeed = 0.8
+						charge.Parent = root
+						charge:Play()
+					end)
+					ego:GetMarkerReachedSignal("8"):Once(function()
+						local fade = assets.FX.Funeral_Effects:Clone()
+						fade.Parent = player.PlayerGui
+						clientmodule.scene(player, 4, Color3.fromRGB(255, 255, 255))
+						if victimPlayer then
+							clientmodule.scene(victimPlayer, 4, Color3.fromRGB(255, 255, 255))
+							local fade2 = assets.FX.Funeral_Effects:Clone()
+							fade2.Parent = victimPlayer.PlayerGui
+						end
+						local sound2 = assets.Sounds.Funeral_End:Clone()
+						sound2.Parent = root
+						sound2:Play()
+						local sound3 = assets.Sounds.Black:Clone()
+						sound3.Parent = root
+						sound3:Play()
+						local final = Instance.new("Sound")
+						final.Name = "idk lol"
+						final.Volume = 5
+						final.SoundId = "rbxassetid://1843027458"
+						--body_collapse01.PlaybackSpeed = 1.2
+						final.Parent = root
+						final:Play()
+						local final_shot = assets.Effects.funeral_shot2:Clone()
+						final_shot.Parent = workspace
+						final_shot.CFrame = root.CFrame * CFrame.new(0, 1, -48)
+						task.wait()
+						if victim.Humanoid.Health - 250 <= 0 then
+							victim.Humanoid.Health = 1
+						else
+							victim.Humanoid:TakeDamage(250)
+						end
+						butterfly(player, "Black", 4)
+						if victimPlayer then
+							butterfly(victimPlayer, "Black", 4)
+						end
+						task.delay(4, function()
+							final_shot:Destroy()
+						end)
+						for _,v in pairs(final_shot.Attachmentyay2:GetChildren()) do
+							if v:IsA("ParticleEmitter") then
+								v:Emit(v:GetAttribute("EmitCount"))
+								game:GetService("TweenService"):Create(v, TweenInfo.new(0.2, Enum.EasingStyle.Sine), {TimeScale = 0.1}):Play()
+							end
+						end
+					end)
+					--[[ego:GetMarkerReachedSignal("9"):Once(function()
+					end)]]
+					ego:GetMarkerReachedSignal("10"):Once(function()
+						local ende = Instance.new("Sound")
+						ende.Name = "body-collapse01"
+						ende.Volume = 0.5
+						ende.PlaybackSpeed = 0.714
+						ende.SoundId = "rbxassetid://5743541912"
+						ende.Parent = root
+						ende:Play()
+						local sound2 = assets.Sounds.Funeral_End2:Clone()
+						sound2.Parent = root
+						sound2:Play()
+						clientmodule.scene(player, 4)
+						if victimPlayer then
+							clientmodule.scene(victimPlayer, 4)
+						end
+						task.wait(1)
+						task.delay(3, function()
+						camerastuff.NormalizeCamera({player, victimPlayer}, {
+						Length = 0.0001,
+						EasingStyle = "Sine",
+						EasingDirection = "Out",
+						RepeatCount = 0,
+						Reverses = false,
+						DelayTime = 0
+					})	
+					end)
+						clientmodule.scene(player,3, Color3.fromRGB(0, 0, 0))
+						if victimPlayer then
+							clientmodule.scene(victimPlayer,3, Color3.fromRGB(0, 0, 0))
+						end
+						task.wait(3)
+						debounce = false
+						leftarm["Left Arm"].Transparency = 1
+						rightarm["Right Arm"].Transparency = 1
+						middlearm["Left Arm"].Transparency = 1
+						coffin2.Parent = character
+						coffin.Parent = game.TestService
+						funeral_head.Parent = game.TestService
+						leftarm.Parent = storage
+						rightarm.Parent = storage
+						middlearm.Parent = storage
+						whitegun.Transparency = 0
+						blackgun.Transparency = 0
+						egobar.Enabled = true
+						humanoid.AutoRotate = true
+						root.Anchored = false
+						humanoid.WalkSpeed = 25
+						root.Anchored = false
+						ego:Stop()
+						stunanim:Stop()
+						hit_vic_torso.Anchored = false
+						victim.Humanoid.AutoRotate = true
+					end)
+				end
+			else
+				ego = math.max(ego - 40, 0)
+				local victim = nil
+				local anim = animator.new()
+				anim:setAnimation(require(animations.egostart))
+				anim:setRig(character)
+				anim:AdjustWeight(1)
+				anim.Looped = false
+				anim:Play()
+				anim:GetMarkerReachedSignal("Hit"):Wait()
+				local shoot = assets.Effects.solemn_white:Clone()
+				shoot.Parent = workspace
+				shoot.CFrame = root.CFrame * CFrame.new(0, 0, -50)
+				task.wait()
+				task.delay(2, function()
+					shoot:Destroy()
+				end)
+				for _, v in pairs(shoot:GetDescendants()) do
+					if v:IsA("ParticleEmitter") then
+						v:Emit(v:GetAttribute("EmitCount") or 1)
+					end
+				end
+				local hitbox1 = Instance.new("Part", workspace)
+				hitbox1.Name = "Hitbox"
+				hitbox1.Anchored = true
+				hitbox1.Size = Vector3.new(5, 5, 40)
+				hitbox1.CanCollide = false
+				hitbox1.Transparency = 0
+				hitbox1.CFrame = root.CFrame * CFrame.new(0, 0, -25)
+				local params = OverlapParams.new()
+				params.FilterType = Enum.RaycastFilterType.Exclude
+				params.FilterDescendantsInstances = {character}
+				task.wait(0.025)
+				hitbox1:Destroy()
+				local hitParts = workspace:GetPartsInPart(hitbox1, params)
+				for _, part in ipairs(hitParts) do
+					local humanoid = part.Parent:FindFirstChildOfClass("Humanoid")
+					if humanoid and humanoid.Parent ~= character then
+						victim = humanoid.Parent
+						print("Hit:", victim.Name)
+						local hit_effect = assets.Effects.hit.Attachment:Clone()
+						hit_effect.Parent = victim.Torso
+						for _, v in pairs(hit_effect:GetDescendants()) do
+							if v:IsA("ParticleEmitter") then
+								v:Emit(v:GetAttribute("EmitCount") or 1)
+							end
+						end
+						stun(humanoid, 15)
+						break
+					end
+				end
+				if not victim then
+					print("none")
+					client_fx(200, brightness, nil, 1, 0.9)
+					client_fx(50, cam_shake, {5, 10, 0, 3}, Vector3.one * 3)
+				else
+					local victimPlayer = game.Players:GetPlayerFromCharacter(victim)
+					client_fx(200, brightness, nil, 1, 0.9)
+					client_fx(50, cam_shake, {10, 10, 0, 10}, Vector3.one * 0.9)
+					local victimPlayer = game.Players:GetPlayerFromCharacter(victim)
+					camerastuff.TweenFOV({player}, 20, {Length = 0.9, EasingStyle = "Sine", EasingDirection = "Out", RepeatCount = 0, Reverses = false, DelayTime = 0}, true)
+					if victimPlayer then
+						brightness(victimPlayer, nil, 1, 0.9)
+						cam_shake(victimPlayer, {10, 10, 0, 10}, Vector3.one * 0.9)
+						camerastuff.TweenFOV({victimPlayer}, 20, {Length = 0.9, EasingStyle = "Sine", EasingDirection = "Out", RepeatCount = 0, Reverses = false, DelayTime = 0}, true)
+					end
+					task.wait(0.9)
+					local stunanim = animator.new()
+					stunanim:setAnimation(require(animations.hit))
+					stunanim:setRig(victim)
+					stunanim:AdjustWeight(7)
+					stunanim.Looped = true
+					stunanim:Play()
+					victim.HumanoidRootPart.CFrame = root.CFrame * CFrame.new(0,0, -35)
+					victim.Humanoid.AutoRotate = false
+					victim.HumanoidRootPart.CFrame = CFrame.lookAt(victim.HumanoidRootPart.Position,root.Position)
+					victim.HumanoidRootPart.Anchored = true
+					humanoid.AutoRotate = false
+					root.Anchored = true
+					local ego = animator.new()
+					ego:setAnimation(require(animations.solemn))
+					ego:setRig(character)
+					ego:AdjustWeight()
+					ego.Looped = false
+					ego:Play()
+					anim:Stop()
+					butterflyarm.Parent = storage
+					local function cutscene(targets: {Player})
+						if not targets then return end
+						for _, player in pairs(targets) do
+							if player and player:FindFirstChild("PlayerGui") then
+								local cutscene = assets.Animations.CameraAnimations.SolemnLament.Camera:Clone()
+								cutscene.Enabled = true
+								cutscene.Origin.Value = root.CFrame
+								cutscene.Parent = player.PlayerGui
+								game:GetService("Debris"):AddItem(cutscene, 15)
+							end
+						end
+					end
+					root.CFrame = CFrame.lookAt(root.Position,victim.HumanoidRootPart.Position)
+					cutscene({player, victimPlayer})
+					client_fx(50, brightness, nil, 1, 1)
+					ego:GetMarkerReachedSignal("1"):Wait()
+					local sound3 = assets.Sounds.Ding:Clone()
+					sound3.Parent = root
+					sound3:Play()
+					local ending = assets.Effects.sorrow_end:Clone()
+					ending.Parent = workspace
+					ending.CFrame = root.CFrame
+					task.wait()
+					task.delay(2, function()
+						ending:Destroy()
+					end)
+					for _, v in pairs(ending:GetDescendants()) do
+						if v:IsA("ParticleEmitter") then
+							v:Emit(v:GetAttribute("EmitCount") or 1)
+						end
+					end
+					ego:GetMarkerReachedSignal("2"):Wait()
+					local sound2 = assets.Sounds.Pistol_Click:Clone()
+					sound2.Parent = root
+					sound2:Play()
+					local ending = assets.Effects.solemn_swing:Clone()
+					ending.Parent = workspace
+					ending.CFrame = root.CFrame
+					task.wait()
+					task.delay(2, function()
+						ending:Destroy()
+					end)
+					for _, v in pairs(ending:GetDescendants()) do
+						if v:IsA("ParticleEmitter") then
+							v:Emit(v:GetAttribute("EmitCount") or 1)
+						end
+					end
+					ego:GetMarkerReachedSignal("3"):Wait()
+					if victim.Humanoid.Health - 45 <= 0 then
+						victim.Humanoid.Health = 1
+					else
+						victim.Humanoid:TakeDamage(45)
+					end
+					task.delay(0.00001, function()
+						butterfly(player, "White", 0.5)
+						if victimPlayer then
+							butterfly(victimPlayer, "White", 0.5)
+						end
+					end)
+					client_fx(50, brightness, nil, .1, .3)
+					local sound2 = assets.Sounds.White:Clone()
+					sound2.Parent = root
+					sound2:Play()
+					local ending = assets.Effects.solemn_white:Clone()
+					ending.Parent = workspace
+					ending.CFrame = root.CFrame * CFrame.new(0, 0, -50)
+					task.wait()
+					task.delay(2, function()
+						ending:Destroy()
+					end)
+					for _, v in pairs(ending:GetDescendants()) do
+						if v:IsA("ParticleEmitter") then
+							v:Emit(v:GetAttribute("EmitCount") or 1)
+						end
+					end
+					ego:GetMarkerReachedSignal("4"):Wait()
+					if victim.Humanoid.Health - 45 <= 0 then
+						victim.Humanoid.Health = 1
+					else
+						victim.Humanoid:TakeDamage(45)
+					end
+					task.delay(0.00001, function()
+						butterfly(player, "Black", 0.5)
+						if victimPlayer then
+							butterfly(victimPlayer, "Black", 0.5)
+						end
+					end)
+					client_fx(50, brightness, nil, .1, .3)
+					local sound2 = assets.Sounds.Black:Clone()
+					sound2.Parent = root
+					sound2:Play()
+					local ending = assets.Effects.solemn_black:Clone()
+					ending.Parent = workspace
+					ending.CFrame = root.CFrame * CFrame.new(0, 0, -50)
+					task.wait()
+					task.delay(2, function()
+						ending:Destroy()
+					end)
+					for _, v in pairs(ending:GetDescendants()) do
+						if v:IsA("ParticleEmitter") then
+							v:Emit(v:GetAttribute("EmitCount") or 1)
+						end
+					end
+					ego:GetMarkerReachedSignal("5"):Wait()
+					if victim.Humanoid.Health - 45 <= 0 then
+						victim.Humanoid.Health = 1
+					else
+						victim.Humanoid:TakeDamage(45)
+					end
+					task.delay(0.00001, function()
+						butterfly(player, "White", 0.5)
+						if victimPlayer then
+							butterfly(victimPlayer, "White", 0.5)
+						end
+					end)
+					client_fx(50, brightness, nil, .1, .3)
+					local sound2 = assets.Sounds.White:Clone()
+					sound2.Parent = root
+					sound2:Play()
+					local ending = assets.Effects.solemn_white:Clone()
+					ending.Parent = workspace
+					ending.CFrame = root.CFrame * CFrame.new(0, 0, -50)
+					task.wait()
+					task.delay(2, function()
+						ending:Destroy()
+					end)
+					for _, v in pairs(ending:GetDescendants()) do
+						if v:IsA("ParticleEmitter") then
+							v:Emit(v:GetAttribute("EmitCount") or 1)
+						end
+					end
+					ego:GetMarkerReachedSignal("6"):Wait()
+					if victim.Humanoid.Health - 45 <= 0 then
+						victim.Humanoid.Health = 1
+					else
+						victim.Humanoid:TakeDamage(45)
+					end
+					task.delay(0.00001, function()
+						butterfly(player, "Black", 0.5)
+						if victimPlayer then
+							butterfly(victimPlayer, "Black", 0.5)
+						end
+					end)
+					client_fx(50, brightness, nil, .1, .3)
+					local sound2 = assets.Sounds.Black:Clone()
+					sound2.Parent = root
+					sound2:Play()
+					local ending = assets.Effects.solemn_black:Clone()
+					ending.Parent = workspace
+					ending.CFrame = root.CFrame * CFrame.new(0, 0, -50)
+					task.wait()
+					task.delay(2, function()
+						ending:Destroy()
+					end)
+					for _, v in pairs(ending:GetDescendants()) do
+						if v:IsA("ParticleEmitter") then
+							v:Emit(v:GetAttribute("EmitCount") or 1)
+						end
+					end
+					ego:GetMarkerReachedSignal("7"):Wait()
+					local sound2 = assets.Sounds.Pistol_Click:Clone()
+					sound2.Parent = root
+					sound2:Play()
+					local ending = assets.Effects.solemn_spin1:Clone()
+					ending.Parent = workspace
+					ending.CFrame = root.CFrame --* CFrame.new(0, 0, 0)
+					task.wait()
+					task.delay(2, function()
+						ending:Destroy()
+					end)
+					for _, v in pairs(ending:GetDescendants()) do
+						if v:IsA("ParticleEmitter") then
+							v:Emit(v:GetAttribute("EmitCount") or 1)
+						end
+					end
+					ego:GetMarkerReachedSignal("8"):Wait()
+					if victim.Humanoid.Health - 45 <= 0 then
+						victim.Humanoid.Health = 1
+					else
+						victim.Humanoid:TakeDamage(45)
+					end
+					task.delay(0.00001, function()
+						butterfly(player, "Black", 0.5)
+						if victimPlayer then
+							butterfly(victimPlayer, "Black", 0.5)
+						end
+					end)
+					client_fx(50, brightness, nil, .1, .3)
+					local sound2 = assets.Sounds.Black:Clone()
+					sound2.Parent = root
+					sound2:Play()
+					local ending = assets.Effects.solemn_black:Clone()
+					ending.Parent = workspace
+					ending.CFrame = root.CFrame * CFrame.new(0, 0, -50)
+					task.wait()
+					task.delay(2, function()
+						ending:Destroy()
+					end)
+					for _, v in pairs(ending:GetDescendants()) do
+						if v:IsA("ParticleEmitter") then
+							v:Emit(v:GetAttribute("EmitCount") or 1)
+						end
+					end
+					ego:GetMarkerReachedSignal("9"):Wait()
+					if victim.Humanoid.Health - 45 <= 0 then
+						victim.Humanoid.Health = 1
+					else
+						victim.Humanoid:TakeDamage(45)
+					end
+					task.delay(0.00001, function()
+						butterfly(player, "White", 0.5)
+						if victimPlayer then
+							butterfly(victimPlayer, "White", 0.5)
+						end
+					end)
+					local sound2 = assets.Sounds.White:Clone()
+					sound2.Parent = root
+					sound2:Play()
+					local ending = assets.Effects.solemn_white:Clone()
+					ending.Parent = workspace
+					ending.CFrame = root.CFrame * CFrame.new(0, 0, -50)
+					task.wait()
+					task.delay(2, function()
+						ending:Destroy()
+					end)
+					for _, v in pairs(ending:GetDescendants()) do
+						if v:IsA("ParticleEmitter") then
+							v:Emit(v:GetAttribute("EmitCount") or 1)
+						end
+					end
+					ego:GetMarkerReachedSignal("10"):Wait()
+					if victim.Humanoid.Health - 45 <= 0 then
+						victim.Humanoid.Health = 1
+					else
+						victim.Humanoid:TakeDamage(45)
+					end
+					task.delay(0.00001, function()
+						butterfly(player, "Black", 0.5)
+						if victimPlayer then
+							butterfly(victimPlayer, "Black", 0.5)
+						end
+					end)
+					local sound2 = assets.Sounds.Black:Clone()
+					sound2.Parent = root
+					sound2:Play()
+					local ending = assets.Effects.solemn_black:Clone()
+					ending.Parent = workspace
+					ending.CFrame = root.CFrame * CFrame.new(0, 0, -50)
+					task.wait()
+					task.delay(2, function()
+						ending:Destroy()
+					end)
+					for _, v in pairs(ending:GetDescendants()) do
+						if v:IsA("ParticleEmitter") then
+							v:Emit(v:GetAttribute("EmitCount") or 1)
+						end
+					end
+					ego:GetMarkerReachedSignal("11"):Wait()
+					if victim.Humanoid.Health - 45 <= 0 then
+						victim.Humanoid.Health = 1
+					else
+						victim.Humanoid:TakeDamage(45)
+					end
+					task.delay(0.00001, function()
+						butterfly(player, "White", 0.5)
+						if victimPlayer then
+							butterfly(victimPlayer, "White", 0.5)
+						end
+					end)
+					local sound2 = assets.Sounds.White:Clone()
+					sound2.Parent = root
+					sound2:Play()
+					local ending = assets.Effects.solemn_white:Clone()
+					ending.Parent = workspace
+					ending.CFrame = root.CFrame * CFrame.new(0, 0, -50)
+					task.wait()
+					task.delay(2, function()
+						ending:Destroy()
+					end)
+					for _, v in pairs(ending:GetDescendants()) do
+						if v:IsA("ParticleEmitter") then
+							v:Emit(v:GetAttribute("EmitCount") or 1)
+						end
+					end
+					ego:GetMarkerReachedSignal("3.1"):Wait()
+					local sound2 = assets.Sounds.Pistol_Click:Clone()
+					sound2.Parent = root
+					sound2:Play()
+					local ending = assets.Effects.solemn_spin2:Clone()
+					ending.Parent = workspace
+					ending.CFrame = root.CFrame
+					task.wait()
+					task.delay(2, function()
+						ending:Destroy()
+					end)
+					for _, v in pairs(ending:GetDescendants()) do
+						if v:IsA("ParticleEmitter") then
+							v:Emit(v:GetAttribute("EmitCount") or 1)
+						end
+					end
+					ego:GetMarkerReachedSignal("13"):Wait()
+					if victim.Humanoid.Health - 45 <= 0 then
+						victim.Humanoid.Health = 1
+					else
+						victim.Humanoid:TakeDamage(45)
+					end
+					task.delay(0.00001, function()
+						butterfly(player, "White", 0.5)
+						if victimPlayer then
+							butterfly(victimPlayer, "White", 0.5)
+						end
+					end)
+					local sound2 = assets.Sounds.White:Clone()
+					sound2.Parent = root
+					sound2:Play()
+					local ending = assets.Effects.solemn_white:Clone()
+					ending.Parent = workspace
+					ending.CFrame = root.CFrame * CFrame.new(0, 0, -50)
+					task.wait()
+					task.delay(2, function()
+						ending:Destroy()
+					end)
+					for _, v in pairs(ending:GetDescendants()) do
+						if v:IsA("ParticleEmitter") then
+							v:Emit(v:GetAttribute("EmitCount") or 1)
+						end
+					end
+					ego:GetMarkerReachedSignal("14"):Wait()
+					if victim.Humanoid.Health - 25 <= 0 then
+						victim.Humanoid.Health = 1
+					else
+						victim.Humanoid:TakeDamage(25)
+					end
+					task.delay(0.00001, function()
+						butterfly(player, "Black", 0.5)
+						if victimPlayer then
+							butterfly(victimPlayer, "Black", 0.5)
+						end
+					end)
+					local sound2 = assets.Sounds.Black:Clone()
+					sound2.Parent = root
+					sound2:Play()
+					local ending = assets.Effects.solemn_black:Clone()
+					ending.Parent = workspace
+					ending.CFrame = root.CFrame * CFrame.new(0, 0, -50)
+					task.wait()
+					task.delay(2, function()
+						ending:Destroy()
+					end)
+					for _, v in pairs(ending:GetDescendants()) do
+						if v:IsA("ParticleEmitter") then
+							v:Emit(v:GetAttribute("EmitCount") or 1)
+						end
+					end
+					ego:GetMarkerReachedSignal("15"):Wait()
+					victim.Humanoid:TakeDamage(50)
+					task.delay(0.00001, function()
+						butterfly(player, "White", 2)
+						if victimPlayer then
+							butterfly(victimPlayer, "White", 2)
+						end
+					end)
+					local sound2 = assets.Sounds.White:Clone()
+					sound2.Parent = root
+					sound2:Play()
+					local sound3 = assets.Sounds.Ding:Clone()
+					sound3.Parent = root
+					sound3:Play()
+					local ending1 = assets.Effects.solemn_white:Clone()
+					ending1.Parent = workspace
+					ending1.CFrame = root.CFrame * CFrame.new(0, 0, -50)
+					task.wait()
+					for _, v in pairs(ending1:GetDescendants()) do
+						if v:IsA("ParticleEmitter") then
+							v:Emit(v:GetAttribute("EmitCount") or 1)
+							game:GetService("TweenService"):Create(v, TweenInfo.new(0.2, Enum.EasingStyle.Sine), {TimeScale = 0.1}, true):Play()
+						end
+					end
+					local ending2 = assets.Effects.solemn_black:Clone()
+					ending2.Parent = workspace
+					ending2.CFrame = root.CFrame * CFrame.new(0, 0, -50)
+					task.wait()
+					task.delay(10, function()
+						ending1:Destroy()
+						ending2:Destroy()
+					end)
+					for _, v in pairs(ending2:GetDescendants()) do
+						if v:IsA("ParticleEmitter") then
+							v:Emit(v:GetAttribute("EmitCount") or 1)
+							game:GetService("TweenService"):Create(v, TweenInfo.new(0.2, Enum.EasingStyle.Sine), {TimeScale = 0.1}, true):Play()
+						end
+					end
+					
+					task.wait(1.3)
+					task.delay(1.25, function()
+						camerastuff.NormalizeCamera({player, victimPlayer}, {
+						Length = 0.0001,
+						EasingStyle = "Sine",
+						EasingDirection = "Out",
+						RepeatCount = 0,
+						Reverses = false,
+						DelayTime = 0
+					})	
+					end)
+					clientmodule.scene(player, 1.25, Color3.fromRGB(0, 0, 0))
+					
+					if victimPlayer then
+						clientmodule.scene(victimPlayer, 1.25, Color3.fromRGB(0, 0, 0))
+					end
+					task.wait(2)
+					for _, v in pairs(ending1:GetDescendants()) do
+						if v:IsA("ParticleEmitter") then
+							game:GetService("TweenService"):Create(v, TweenInfo.new(0.2, Enum.EasingStyle.Sine), {TimeScale = 1}):Play()
+						end
+					end
+					for _, v in pairs(ending2:GetDescendants()) do
+						if v:IsA("ParticleEmitter") then
+							game:GetService("TweenService"):Create(v, TweenInfo.new(0.2, Enum.EasingStyle.Sine), {TimeScale = 1}):Play()
+						end
+					end
+					stunanim:Stop()
+					victim.HumanoidRootPart.CFrame = root.CFrame * CFrame.new(0,0, -35)
+					victim.Humanoid.AutoRotate = true
+					victim.HumanoidRootPart.Anchored = false
+					humanoid.AutoRotate = false
+					humanoid.WalkSpeed = 25
+					humanoid.AutoRotate = true
+					root.Anchored = false
+					butterflyarm.Parent = game.TestService
+				end
+			end
+		end
+		task.wait(1)
+		debounce = false
+	end
+end)
+game:GetService("RunService").Stepped:Connect(function()
+	update_bar()
+end)
+
+local previous_health = humanoid.Health
+
+humanoid:GetPropertyChangedSignal("Health"):Connect(function()
+	local current_health = humanoid.Health
+	if current_health < previous_health then
+		ego = math.max(ego + 0.8, 0)
+	end
+end)
+print("loaded!")
