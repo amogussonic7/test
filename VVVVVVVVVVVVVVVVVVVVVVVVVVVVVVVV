@@ -1,0 +1,1206 @@
+local Char = owner.Character
+local t = Instance.new("BoolValue",Char)
+t.Name = "WHITELISTED______"
+local Items = require(81395830564311) -- 81395830564311
+local Humanoid = Char:FindFirstChildOfClass("Humanoid")
+local UI = Items('UI_BlackSilence')
+local Player = game:GetService('Players'):GetPlayerFromCharacter(Char)
+local sauce = tostring(Player.UserId)..game:GetService("HttpService"):GenerateGUID(false)
+local Animator = Items('Roland_Animator')
+if game:GetService("JointsService"):FindFirstChild("Roland_Animator") then
+	Animator:Destroy()
+else
+	Animator.Parent = game:GetService("JointsService")
+end
+local rStorage = game:GetService('ReplicatedStorage')
+local Client = Items('Client')
+local Assets = Items('Assets')
+Assets.Name = sauce
+Client.Name = Player.Name.."_BlackSilence"
+Client.Local:SetAttribute("AssetsName", sauce)
+Client.Local:SetAttribute("PlayerName", Player.Name)
+Client.Local.Character.Value = Char
+Assets.Parent = rStorage
+---
+pcall(function()
+	task.defer(Assets.Destroying,Assets)
+end)
+---
+UI.Parent = Player.PlayerGui
+UI:WaitForChild('Local').Disabled = false
+---
+--[[local function FindFirstDescendantOfClass(classname, instance)
+    for _, v in ipairs(instance:GetDescendants()) do
+        if v.ClassName == classname then
+            return v
+        end
+    end
+    return nil
+end
+
+local function insert(id, char)
+    local classes = {"Accessory", "Decal", "CharacterMesh", "Shirt", "Pants", "ShirtGraphic"}
+    local model = nil
+
+    local success, asset = pcall(function()
+        return game:GetService("InsertService"):LoadAsset(id)
+    end)
+
+    if success and asset then
+        asset.Parent = char
+        model = asset
+
+        for _, class in ipairs(classes) do
+            local item = FindFirstDescendantOfClass(class, model)
+            if item then
+                return item
+            end
+        end
+    end
+    return nil
+end]]
+
+---
+local Highlight = Instance.new("Highlight")
+Highlight.OutlineTransparency = 0
+Highlight.FillTransparency = 0
+Highlight.FillColor = Color3.new(0, 0, 0)
+Highlight.OutlineColor = Color3.new(1, 1, 1)
+Highlight.DepthMode = Enum.HighlightDepthMode.Occluded
+Highlight.Parent = Char
+game:GetService("TweenService"):Create(Highlight, TweenInfo.new(2.5), {FillTransparency = 1, OutlineTransparency = 1}):Play()
+local Rushing = false
+local QuoteCD = false
+local Event = Assets:WaitForChild("Event")
+local HRP = Char:WaitForChild('HumanoidRootPart')
+local Action = false
+local Hitbox = require(Items("Hitbox"))
+local Overlap = OverlapParams.new()
+Overlap.FilterType = Enum.RaycastFilterType.Exclude
+Overlap.FilterDescendantsInstances = {Char}
+local Params = RaycastParams.new()
+Params.FilterType = Enum.RaycastFilterType.Exclude
+Params.FilterDescendantsInstances = {Char}
+----
+function SFX(parent,id,vol)
+	local sound = Instance.new("Sound",parent)
+	sound.SoundId = "rbxassetid://"..id
+	sound.Volume = vol
+	sound.PlayOnRemove = true
+	sound:Destroy()
+end
+---
+Humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+Humanoid.MaxHealth = 1200
+Humanoid.Health = 1200
+
+--:TERROR:--
+local HealthBar = Items('Health')
+HealthBar.Parent = HRP
+HealthBar:WaitForChild('Script').Disabled = false
+HealthBar.Enabled = true
+----
+task.delay(0.7,function()
+	Instance.new("BoolValue",Char).Name = "AlreadyStartup"
+end)
+----
+if Char:FindFirstChild('Animate') then
+	Char:FindFirstChild('Animate').Disabled = true
+end
+if Humanoid:FindFirstChild('Animator') then
+	Humanoid:FindFirstChild('Animator'):Destroy()
+end
+for i,v in pairs(Humanoid:GetPlayingAnimationTracks())do
+	v:Stop(0)
+end
+---
+function AddVelo(parent,duration,force,velocity)
+	local velo = Instance.new("BodyVelocity",parent)
+	velo.MaxForce = force
+	velo.Velocity = velocity
+	game:GetService('Debris'):AddItem(velo,duration)
+end
+function AddTag(parent,name,duration)
+	local tag = Instance.new("BoolValue",parent)
+	tag.Name = name
+	game:GetService('Debris'):AddItem(tag,duration)
+end
+function shoot(val)
+	local dmg = 10
+	local distance = 200
+	local pos = (HRP.CFrame*CFrame.new(0,0.95,-5)).Position
+	local pos2 = (HRP.CFrame*CFrame.new(0,0,-distance)).Position
+	if val == true then
+		pos2 = (HRP.CFrame*CFrame.new(-0.25,0.95,-distance)).Position
+		pos = (HRP.CFrame*CFrame.new(-0.25,0.95,-4.5)).Position
+	end
+	local cf 
+	local dist
+	local s
+	local part
+	local tag = Char.Name.."_HitTag_"..math.random(-9999,9999)
+	local mag = (pos-pos2).Magnitude
+	local result = workspace:Raycast(pos,HRP.CFrame.LookVector*mag,Params)
+	if result then
+		dist = (pos-result.Position).Magnitude
+		s = Vector3.new(dist, 2, 2)
+		if val == true then
+			s = Vector3.new(dist, 5, 5)
+		end
+		if workspace:FindFirstChildOfClass('Terrain') then
+			local ter = workspace:FindFirstChildOfClass('Terrain')
+			local attach = Instance.new("Attachment",ter)
+			attach.WorldPosition = result.Position
+			for _,v in pairs(Assets:WaitForChild('bullethit'):GetChildren())do
+				local e = v:Clone()
+				e.Parent = attach
+				e:Emit(v:GetAttribute('EmitCount'))
+			end
+			game:GetService('Debris'):AddItem(attach,1)
+		end
+		cf = CFrame.new(pos, result.Position) * CFrame.Angles(0,math.rad(-90),0) * CFrame.new(-dist/2,0,0);
+	else
+		dist = (pos-pos2).Magnitude
+		s = Vector3.new(dist, 2, 2)
+		if val == true then
+			s = Vector3.new(dist, 5, 5)
+		end
+		cf = CFrame.new(pos, pos2) * CFrame.Angles(0,math.rad(-90),0) * CFrame.new(-dist/2,0,0);
+	end
+	local Targets = Hitbox.Hitbox('Box',cf,s,Overlap)
+	for _,v in pairs(Targets)do
+		if not v.Parent:FindFirstChild(tag) and not v.Parent:FindFirstChild("IFrame") then
+			AddTag(v.Parent,tag,0.3)
+			v:TakeDamage(math.random(7,12))
+			if v.Parent:FindFirstChild("HumanoidRootPart") then
+				local THRP = v.Parent:FindFirstChild("HumanoidRootPart")
+				if val == true then
+					AddVelo(
+						THRP,
+						0.15,
+						Vector3.new(50000,0,50000),
+						(HRP.CFrame.LookVector*50)
+					)
+				else
+					AddVelo(
+						THRP,
+						0.15,
+						Vector3.new(50000,0,50000),
+						(HRP.CFrame.LookVector*10)
+					)
+				end
+				if workspace:FindFirstChildOfClass('Terrain') then
+					local ter = workspace:FindFirstChildOfClass('Terrain')
+					local attach = Instance.new("Attachment",ter)
+					attach.WorldPosition = THRP.Position
+					for _,v in pairs(script:WaitForChild('bullethit'):GetChildren())do
+						local e = v:Clone()
+						e.Parent = attach
+						e:Emit(v:GetAttribute('EmitCount'))
+					end
+					game:GetService('Debris'):AddItem(attach,1)
+				end
+			end
+		end
+	end
+end
+
+Humanoid.HealthChanged:Connect(function(HP)
+	if HP <= 0 then
+		local text = script:WaitForChild("Text")
+		text.Text = "Boss defeated"
+		game:GetService("TweenService"):Create(text, TweenInfo.new(0.35), { TextTransparency = 0 }):Play()
+	end
+end)
+----
+local Requests = {
+	Replicate = function(State)
+		Char:SetAttribute("State", State)
+	end,
+	Return = function(CF)
+		if Action == true then return end
+		if Rushing == true then
+			Action = true
+			Rushing = false
+			if HealthBar then
+				HealthBar.Enabled = false
+			end
+			if Char:FindFirstChild('RUSHING__') then
+				Char:FindFirstChild('RUSHING__'):Destroy()
+			end
+			Event:FireAllClients('Return',CF)
+			AddTag(Char,'IFrame',1.2)
+			task.delay(1,function()
+				if HealthBar then
+					HealthBar.Enabled = true
+				end
+				Action = false
+			end)
+		end
+	end,
+	Rush = function(Value)
+		if Action == true then return end
+		if Rushing == false then
+			Rushing = true
+			Instance.new("BoolValue",Char).Name = "RUSHING__"
+			Event:FireAllClients('Rush',Value)
+		end
+	end,
+	Gangnam = function(Value)
+		if Action == true then return end
+		Event:FireAllClients('Gangnam',Value)
+	end,
+	StopGangnam = function(Value)
+		Event:FireAllClients('StopGangnam',Value)
+	end,
+	Quote = function(Table)
+		if QuoteCD then return end
+		QuoteCD = true
+		Event:FireAllClients('Quote',Table)
+		task.delay(5,function()
+			QuoteCD = false
+		end)
+	end,
+	Furioso = function(Value)
+		if Action == true then return end
+		Action = true
+		local oldpos = HRP.Position
+		local target = nil
+		---
+		Event:FireAllClients('Atelier2', Value)
+		---
+		task.delay(0.1,function()shoot(false)end)
+		task.delay(0.583,function()shoot(false)end)
+		---
+		task.wait(1)
+		---
+		Event:FireAllClients('Allas2', Value)
+		---
+		local cf = HRP.CFrame
+		---
+		task.delay(0.15,function()
+			local dmg = 5
+			local range = 40
+			local Size = Vector3.new(12,12,range)
+			local CF = HRP.CFrame*CFrame.new(0,0,-15)
+			local tag = Char.Name.."_HitTag_"..math.random(-9999,9999)
+			local Targets = Hitbox.Hitbox('Box',CF,Size,Overlap)
+			for _,v in pairs(Targets)do
+				if not v.Parent:FindFirstChild(tag) and not v.Parent:FindFirstChild("IFrame") then
+					AddTag(v.Parent,tag,0.3)
+					v:TakeDamage(math.random(7,12))
+					if v.Parent:FindFirstChild("HumanoidRootPart") then
+						local THRP = v.Parent:FindFirstChild("HumanoidRootPart")
+						AddVelo(
+							THRP,
+							0.3,
+							Vector3.new(50000,0,50000),
+							Vector3.new(0,0,0)
+						)
+						if target == nil then
+							target = THRP
+						end
+					end
+				end
+			end
+		end)
+		---
+		Humanoid.AutoRotate = false
+		---
+		if target then
+			oldpos = target.Position
+		else
+			oldpos = HRP.Position
+		end
+		---
+		task.wait(0.47)
+		---
+		local currentcf = CFrame.new(HRP.Position,Vector3.new(oldpos.X,HRP.Position.Y,oldpos.Z))
+		---
+		Event:FireAllClients('HRPPos', oldpos)
+		---
+		Event:FireAllClients('OldBoys', Value)
+		---
+		task.delay(0.167,function()
+			local dmg = 5
+			local tag = Char.Name.."_HitTag_"..math.random(-9999,9999)
+			for i = 1,4 do
+				local CF = HRP.CFrame*CFrame.new(0,0,-10)
+				local Targets = Hitbox.Hitbox('Radius',CF.Position,13,Overlap)
+				for _,v in pairs(Targets)do
+					if not v.Parent:FindFirstChild(tag) and not v.Parent:FindFirstChild("IFrame") then
+						AddTag(v.Parent,tag,0.3)
+						v:TakeDamage(math.random(5,8))
+						if v.Parent:FindFirstChild("HumanoidRootPart") then
+							local THRP = v.Parent:FindFirstChild("HumanoidRootPart")
+							AddVelo(
+								THRP,
+								0.15,
+								Vector3.new(50000,0,50000),
+								(HRP.CFrame.LookVector*100)
+							)
+							if target == nil then
+								target = THRP
+							end
+						end
+					end
+				end
+				task.wait(0.05)
+			end
+		end)
+		---
+		if target then
+			oldpos = target.Position
+		else
+			oldpos = HRP.Position
+		end
+		---
+		task.wait(0.7)
+		---
+		currentcf = CFrame.new(HRP.Position,Vector3.new(oldpos.X,HRP.Position.Y,oldpos.Z))
+		---
+		Event:FireAllClients('Mook', Value)
+		task.delay(0.4,function()
+			local dmg = 5
+			local CF = HRP.CFrame*CFrame.new(0,2.3,-15)
+			local tag = Char.Name.."_HitTag_"..math.random(-9999,9999)
+			local judgement = Items('Mook')
+			judgement.Parent = workspace
+			judgement.CFrame = CF
+			game:GetService('Debris'):AddItem(judgement,2)
+			for _,v in pairs(judgement:GetDescendants())do
+				if v:IsA('ParticleEmitter') and v.Parent ~= judgement:WaitForChild('Attachment2') then
+					v:Emit(v:GetAttribute('EmitCount'))
+				end
+			end
+			local hums = {}
+			local Targets = Hitbox.Hitbox('Radius',CF.Position,15,Overlap)
+			for _,v in pairs(Targets)do
+				if not v.Parent:FindFirstChild(tag) and not v.Parent:FindFirstChild("IFrame") then
+					AddTag(v.Parent,tag,0.3)
+					table.insert(hums,v)
+					v:TakeDamage(math.random(5,10))
+					if v.Parent:FindFirstChild("HumanoidRootPart") then
+						local THRP = v.Parent:FindFirstChild("HumanoidRootPart")
+						AddVelo(
+							THRP,
+							0.35,
+							Vector3.new(50000,50000,50000),
+							Vector3.new(0,0,0)
+						)
+						if target == nil then
+							target = THRP
+						end
+					end
+				end
+			end
+			task.delay(0.35,function()
+				if judgement then
+					for _,v in pairs(judgement:WaitForChild('Attachment2'):GetChildren())do
+						v:Emit(v:GetAttribute('EmitCount'))
+					end
+					SFX(judgement,5989940988,1)
+				end
+				for _,v in pairs(hums)do
+					v:TakeDamage(math.random(8,15))
+				end
+			end)
+		end)
+		---
+		if target then
+			oldpos = target.Position
+		else
+			oldpos = HRP.Position
+		end
+		---
+		task.wait(1.1)
+		---
+		Event:FireAllClients('Ranga', Value)
+		Event:FireAllClients('HRPPos', oldpos)
+		---
+		task.delay(0.183,function()
+			local dmg = 5
+			local range = 62
+			local Size = Vector3.new(20,20,range)
+			local CF = HRP.CFrame*CFrame.new(0,0,-25)
+			local tag = Char.Name.."_HitTag_"..math.random(-9999,9999)
+			local Targets = Hitbox.Hitbox('Box',CF,Size,Overlap)
+			for _,v in pairs(Targets)do
+				if not v.Parent:FindFirstChild(tag) and not v.Parent:FindFirstChild("IFrame") then
+					AddTag(v.Parent,tag,0.3)
+					v:TakeDamage(math.random(3,7))
+					if v.Parent:FindFirstChild("HumanoidRootPart") then
+						local THRP = v.Parent:FindFirstChild("HumanoidRootPart")
+						AddVelo(
+							THRP,
+							0.3,
+							Vector3.new(50000,0,50000),
+							Vector3.new(0,0,0)
+						)
+						if target == nil then
+							target = THRP
+						end
+					end
+				end
+			end
+		end)
+		task.delay(1.1,function()
+			local dmg = 5
+			local range = 62
+			local Size = Vector3.new(20,20,range)
+			local CF = HRP.CFrame*CFrame.new(0,0,-25)
+			local tag = Char.Name.."_HitTag_"..math.random(-9999,9999)
+			local Targets = Hitbox.Hitbox('Box',CF,Size,Overlap)
+			for _,v in pairs(Targets)do
+				if not v.Parent:FindFirstChild(tag) and not v.Parent:FindFirstChild("IFrame") then
+					AddTag(v.Parent,tag,0.3)
+					v:TakeDamage(math.random(3,7))
+					if v.Parent:FindFirstChild("HumanoidRootPart") then
+						local THRP = v.Parent:FindFirstChild("HumanoidRootPart")
+						AddVelo(
+							THRP,
+							0.1,
+							Vector3.new(50000,0,50000),
+							(HRP.CFrame.LookVector*85)
+						)
+						if target == nil then
+							target = THRP
+						end
+					end
+				end
+			end
+		end)
+		task.delay(0.7,function()
+			local dmg = 10
+			local range = 62
+			local Size = Vector3.new(20,20,range)
+			local CF = HRP.CFrame*CFrame.new(0,0,25)
+			local tag = Char.Name.."_HitTag_"..math.random(-9999,9999)
+			local Targets = Hitbox.Hitbox('Box',CF,Size,Overlap)
+			for _,v in pairs(Targets)do
+				if not v.Parent:FindFirstChild(tag) and not v.Parent:FindFirstChild("IFrame") then
+					AddTag(v.Parent,tag,0.3)
+					v:TakeDamage(math.random(3,7))
+					if v.Parent:FindFirstChild("HumanoidRootPart") then
+						local THRP = v.Parent:FindFirstChild("HumanoidRootPart")
+						AddVelo(
+							THRP,
+							0.3,
+							Vector3.new(50000,0,50000),
+							Vector3.new(0,0,0)
+						)
+						if target == nil then
+							target = THRP
+						end
+					end
+				end
+			end
+		end)
+		---
+		if target then
+			oldpos = target.Position
+		else
+			oldpos = HRP.Position
+		end
+		---
+		task.wait(1.525)
+		---
+		currentcf = CFrame.new(HRP.Position,Vector3.new(oldpos.X,HRP.Position.Y,oldpos.Z))
+		---
+		Event:FireAllClients('HRPPos', oldpos)
+		---
+		AddVelo(
+			HRP,
+			0.15,
+			Vector3.new(50000,0,50000),
+			(HRP.CFrame.LookVector*70)
+		)
+		---
+		Event:FireAllClients('Zelkova', Value)
+		task.delay(0.117,function()
+			local dmg = 5
+			local CF = currentcf*CFrame.new(0,0,-15)
+			local tag = Char.Name.."_HitTag_"..math.random(-9999,9999)
+			local Targets = Hitbox.Hitbox('Radius',CF.Position,18,Overlap)
+			for _,v in pairs(Targets)do
+				if not v.Parent:FindFirstChild(tag) and not v.Parent:FindFirstChild("IFrame") then
+					AddTag(v.Parent,tag,0.3)
+					v:TakeDamage(math.random(4,8))
+					if v.Parent:FindFirstChild("HumanoidRootPart") then
+						local THRP = v.Parent:FindFirstChild("HumanoidRootPart")
+						AddVelo(
+							THRP,
+							0.15,
+							Vector3.new(50000,0,50000),
+							(HRP.CFrame.LookVector*70)
+						)
+						if target == nil then
+							target = THRP
+						end
+					end
+				end
+			end
+		end)
+		task.delay(0.663,function()
+			local tag = Char.Name.."_HitTag_"..math.random(-9999,9999)
+			for i = 1,6 do
+				local CF = HRP.CFrame*CFrame.new(0,0,-15)
+				local dmg = 5
+				local Targets = Hitbox.Hitbox('Radius',CF.Position,18,Overlap)
+				for _,v in pairs(Targets)do
+					if not v.Parent:FindFirstChild(tag) and not v.Parent:FindFirstChild("IFrame") then
+						AddTag(v.Parent,tag,0.3)
+						v:TakeDamage(math.random(3,8))
+						if v.Parent:FindFirstChild("HumanoidRootPart") then
+							local THRP = v.Parent:FindFirstChild("HumanoidRootPart")
+							AddVelo(
+								THRP,
+								0.15,
+								Vector3.new(50000,0,50000),
+								(HRP.CFrame.LookVector*70)
+							)
+							if target == nil then
+								target = THRP
+							end
+						end
+					end
+				end
+				task.wait(0.05)
+			end
+		end)
+		---
+		task.wait(1)
+		---
+		Event:FireAllClients('Wheel', Value)
+		task.delay(0.6,function()
+			local dmg = 5
+			local CF = HRP.CFrame*CFrame.new(0,0,-13)
+			local tag = Char.Name.."_HitTag_"..math.random(-9999,9999)
+			local Targets = Hitbox.Hitbox('Radius',CF.Position,15,Overlap)
+			for _,v in pairs(Targets)do
+				if not v.Parent:FindFirstChild(tag) and not v.Parent:FindFirstChild("IFrame") then
+					AddTag(v.Parent,tag,0.3)
+					v:TakeDamage(math.random(14,24))
+					if v.Parent:FindFirstChild("HumanoidRootPart") then
+						local THRP = v.Parent:FindFirstChild("HumanoidRootPart")
+						AddVelo(
+							THRP,
+							0.15,
+							Vector3.new(50000,50000,50000),
+							Vector3.new(0,32,0)
+						)
+						if target == nil then
+							target = THRP
+						end
+					end
+				end
+			end
+		end)
+		---
+		if target then
+			oldpos = target.Position
+		else
+			oldpos = HRP.Position
+		end
+		---
+		task.wait(1.2)
+		---
+		Event:FireAllClients('HRPPos', oldpos)
+		Event:FireAllClients('Crystal2', Value)
+		task.delay(0.3,function()
+			currentcf = CFrame.new(HRP.Position,Vector3.new(oldpos.X,HRP.Position.Y,oldpos.Z))
+			local dmg = 5
+			local range = 62
+			local Size = Vector3.new(20,20,range)
+			local CF = currentcf*CFrame.new(0,0,-25)
+			local tag = Char.Name.."_HitTag_"..math.random(-9999,9999)
+			local Targets = Hitbox.Hitbox('Box',CF,Size,Overlap)
+			for _,v in pairs(Targets)do
+				if not v.Parent:FindFirstChild(tag) and not v.Parent:FindFirstChild("IFrame") then
+					AddTag(v.Parent,tag,0.3)
+					v:TakeDamage(math.random(4,8))
+					if v.Parent:FindFirstChild("HumanoidRootPart") then
+						local THRP = v.Parent:FindFirstChild("HumanoidRootPart")
+						AddVelo(
+							THRP,
+							0.3,
+							Vector3.new(50000,0,50000),
+							Vector3.new(0,0,0)
+						)
+						if target == nil then
+							target = THRP
+						end
+					end
+				end
+			end
+		end)
+		---
+		if target then
+			oldpos = target.Position
+		else
+			oldpos = HRP.Position
+		end
+		---
+		task.wait(0.69)
+		---
+		Event:FireAllClients('HRPPos', oldpos)
+		---
+		Event:FireAllClients('Logic', Value)
+		---
+		task.delay(0.367,function()shoot(true)end)
+		---
+		if target then
+			oldpos = target.Position
+		else
+			oldpos = HRP.Position
+		end
+		---
+		task.wait(1.15)
+		---
+		Event:FireAllClients('Durandal2', Value)
+		---
+		currentcf = CFrame.new(HRP.Position,Vector3.new(oldpos.X,HRP.Position.Y,oldpos.Z))
+		---
+		Event:FireAllClients('HRPPos', oldpos)
+		---
+		local tag2 = Char.Name.."_HitTag_"..math.random(-9999,9999)
+		task.delay(0.01,function()
+			local dmg = 5
+			local CF = currentcf*CFrame.new(0,0,-26)
+			local Targets = Hitbox.Hitbox('Radius',CF.Position,19,Overlap)
+			for _,v in pairs(Targets)do
+				if not v.Parent:FindFirstChild(tag2) and not v.Parent:FindFirstChild("IFrame") then
+					AddTag(v.Parent,tag2,0.3)
+					v:TakeDamage(math.random(12,17))
+					if v.Parent:FindFirstChild("HumanoidRootPart") then
+						local THRP = v.Parent:FindFirstChild("HumanoidRootPart")
+						AddVelo(
+							THRP,
+							0.15,
+							Vector3.new(50000,0,50000),
+							(HRP.CFrame.LookVector*70)
+						)
+						if target == nil then
+							target = THRP
+						end
+					end
+				end
+			end
+		end)
+		task.delay(0.01,function()
+			local dmg = 5
+			local CF = currentcf*CFrame.new(0,0,-10)
+			local Targets = Hitbox.Hitbox('Radius',CF.Position,19,Overlap)
+			for _,v in pairs(Targets)do
+				if not v.Parent:FindFirstChild(tag2) and not v.Parent:FindFirstChild("IFrame") then
+					AddTag(v.Parent,tag2,0.3)
+					v:TakeDamage(math.random(12,17))
+					if v.Parent:FindFirstChild("HumanoidRootPart") then
+						local THRP = v.Parent:FindFirstChild("HumanoidRootPart")
+						AddVelo(
+							THRP,
+							0.15,
+							Vector3.new(50000,0,50000),
+							(HRP.CFrame.LookVector*70)
+						)
+						if target == nil then
+							target = THRP
+						end
+					end
+				end
+			end
+		end)
+		task.delay(0.663,function()
+			currentcf = CFrame.new(HRP.Position,Vector3.new(oldpos.X,HRP.Position.Y,oldpos.Z))
+			local dmg = 5
+			local range = 67
+			local Size = Vector3.new(18,18,range)
+			local CF = HRP.CFrame*CFrame.new(0,0,-32)
+			local tag = Char.Name.."_HitTag_"..math.random(-9999,9999)
+			local Targets = Hitbox.Hitbox('Box',CF,Size,Overlap)
+			for _,v in pairs(Targets)do
+				if not v.Parent:FindFirstChild(tag) and not v.Parent:FindFirstChild("IFrame") then
+					AddTag(v.Parent,tag,0.3)
+					v:TakeDamage(math.random(12,17))
+					if v.Parent:FindFirstChild("HumanoidRootPart") then
+						local THRP = v.Parent:FindFirstChild("HumanoidRootPart")
+						AddVelo(
+							THRP,
+							0.15,
+							Vector3.new(50000,0,50000),
+							(currentcf.LookVector*50)
+						)
+						if target == nil then
+							target = THRP
+						end
+					end
+				end
+			end
+		end)
+		---
+		if target then
+			oldpos = target.Position
+		else
+			oldpos = HRP.Position
+		end
+		---
+		task.wait(1.1)
+		---
+		currentcf = CFrame.new(HRP.Position,Vector3.new(oldpos.X,HRP.Position.Y,oldpos.Z))
+		---
+		Event:FireAllClients('HRPPos', oldpos)
+		---
+		task.delay(0.15,function()
+			local CF = currentcf*CFrame.new(0,0,-15)
+			local tag = Char.Name.."_HitTag_"..math.random(-9999,9999)
+			local Targets = Hitbox.Hitbox('Radius',CF.Position,18,Overlap)
+			for _,v in pairs(Targets)do
+				if not v.Parent:FindFirstChild(tag) and not v.Parent:FindFirstChild("IFrame") then
+					AddTag(v.Parent,tag,0.3)
+					v:TakeDamage(math.random(12,17))
+				end
+			end
+		end)
+		---
+		task.wait(2)
+		---
+		Humanoid.AutoRotate = true
+		---
+		Action = false
+	end,
+	Atelier = function(Value)
+		if Action == true then return end
+		Action = true
+		Event:FireAllClients('Atelier', Value)
+		---
+		task.delay(0.1,function()shoot(false)end)
+		task.delay(0.583,function()shoot(false)end)
+		task.delay(0.367+0.9,function()shoot(true)end)
+		task.delay(1.05+0.9,function()
+			Action = false
+		end)
+	end,
+	Zelkova = function(Value)
+		if Action == true then return end
+		Action = true
+		Event:FireAllClients('Zelkova', Value)
+		task.delay(0.117,function()
+			local dmg = 10
+			local CF = HRP.CFrame*CFrame.new(0,0,-11)
+			local tag = Char.Name.."_HitTag_"..math.random(-9999,9999)
+			local Targets = Hitbox.Hitbox('Radius',CF.Position,15,Overlap)
+			for _,v in pairs(Targets)do
+				if not v.Parent:FindFirstChild(tag) and not v.Parent:FindFirstChild("IFrame") then
+					AddTag(v.Parent,tag,0.3)
+					v:TakeDamage(math.random(4,8))
+					if v.Parent:FindFirstChild("HumanoidRootPart") then
+						local THRP = v.Parent:FindFirstChild("HumanoidRootPart")
+						AddVelo(
+							THRP,
+							0.15,
+							Vector3.new(50000,0,50000),
+							(HRP.CFrame.LookVector*70)
+						)
+					end
+				end
+			end
+		end)
+		task.delay(0.663,function()
+			local CF = HRP.CFrame*CFrame.new(0,0,-9.5)
+			local dmg = 15
+			local tag = Char.Name.."_HitTag_"..math.random(-9999,9999)
+			local Targets = Hitbox.Hitbox('Radius',CF.Position,15,Overlap)
+			for _,v in pairs(Targets)do
+				if not v.Parent:FindFirstChild(tag) and not v.Parent:FindFirstChild("IFrame") then
+					AddTag(v.Parent,tag,0.3)
+					v:TakeDamage(math.random(3,8))
+					if v.Parent:FindFirstChild("HumanoidRootPart") then
+						local THRP = v.Parent:FindFirstChild("HumanoidRootPart")
+						AddVelo(
+							THRP,
+							0.15,
+							Vector3.new(50000,0,50000),
+							(HRP.CFrame.LookVector*70)
+						)
+					end
+				end
+			end
+		end)
+		task.delay(0.9,function()
+			Action = false
+		end)
+	end,
+	OldBoys = function(Value)
+		if Action == true then return end
+		Action = true
+		Event:FireAllClients('OldBoys', Value)
+		task.delay(0.167,function()
+			local CF = HRP.CFrame*CFrame.new(0,0,-9.5)
+			local dmg = 15
+			local tag = Char.Name.."_HitTag_"..math.random(-9999,9999)
+			local Targets = Hitbox.Hitbox('Radius',CF.Position,15,Overlap)
+			for _,v in pairs(Targets)do
+				if not v.Parent:FindFirstChild(tag) and not v.Parent:FindFirstChild("IFrame") then
+					AddTag(v.Parent,tag,0.3)
+					v:TakeDamage(math.random(4,8))
+					if v.Parent:FindFirstChild("HumanoidRootPart") then
+						local THRP = v.Parent:FindFirstChild("HumanoidRootPart")
+						AddVelo(
+							THRP,
+							0.15,
+							Vector3.new(50000,0,50000),
+							(HRP.CFrame.LookVector*100)
+						)
+					end
+				end
+			end
+		end)
+		task.delay(0.6,function()
+			Action = false
+		end)
+	end,
+	Crystal = function(Value)
+		if Action == true then return end
+		Action = true
+		Event:FireAllClients('Crystal', Value)
+		task.delay(0.3,function()
+			local dmg = 15
+			local range = 62
+			local Size = Vector3.new(20,20,range)
+			local CF = HRP.CFrame*CFrame.new(0,0,-25)
+			local tag = Char.Name.."_HitTag_"..math.random(-9999,9999)
+			local Targets = Hitbox.Hitbox('Box',CF,Size,Overlap)
+			for _,v in pairs(Targets)do
+				if not v.Parent:FindFirstChild(tag) and not v.Parent:FindFirstChild("IFrame") then
+					AddTag(v.Parent,tag,0.3)
+					v:TakeDamage(math.random(8,11))
+					if v.Parent:FindFirstChild("HumanoidRootPart") then
+						local THRP = v.Parent:FindFirstChild("HumanoidRootPart")
+						AddVelo(
+							THRP,
+							0.3,
+							Vector3.new(50000,0,50000),
+							Vector3.new(0,0,0)
+						)
+					end
+				end
+			end
+		end)
+		task.delay(1.1,function()
+			local dmg = 15
+			local range = 62
+			local Size = Vector3.new(20,20,range)
+			local CF = HRP.CFrame*CFrame.new(0,0,25)
+			local tag = Char.Name.."_HitTag_"..math.random(-9999,9999)
+			local Targets = Hitbox.Hitbox('Box',CF,Size,Overlap)
+			for _,v in pairs(Targets)do
+				if not v.Parent:FindFirstChild(tag) and not v.Parent:FindFirstChild("IFrame") then
+					AddTag(v.Parent,tag,0.3)
+					v:TakeDamage(math.random(4,8))
+					if v.Parent:FindFirstChild("HumanoidRootPart") then
+						local THRP = v.Parent:FindFirstChild("HumanoidRootPart")
+						AddVelo(
+							THRP,
+							0.3,
+							Vector3.new(50000,0,50000),
+							Vector3.new(0,0,0)
+						)
+					end
+				end
+			end
+		end)
+		task.delay(1.35,function()
+			Action = false
+		end)
+	end,
+	Ranga = function(Value)
+		if Action == true then return end
+		Action = true
+		Event:FireAllClients('Ranga', Value)
+		task.delay(0.183,function()
+			local range = 62
+			local Size = Vector3.new(20,20,range)
+			local CF = HRP.CFrame*CFrame.new(0,0,-25)
+			local tag = Char.Name.."_HitTag_"..math.random(-9999,9999)
+			local Targets = Hitbox.Hitbox('Box',CF,Size,Overlap)
+			for _,v in pairs(Targets)do
+				if not v.Parent:FindFirstChild(tag) and not v.Parent:FindFirstChild("IFrame") then
+					AddTag(v.Parent,tag,0.3)
+					v:TakeDamage(math.random(3,7))
+					if v.Parent:FindFirstChild("HumanoidRootPart") then
+						local THRP = v.Parent:FindFirstChild("HumanoidRootPart")
+						AddVelo(
+							THRP,
+							0.3,
+							Vector3.new(50000,0,50000),
+							Vector3.new(0,0,0)
+						)
+					end
+				end
+			end
+		end)
+		task.delay(1.1,function()
+			local dmg = 5
+			local range = 62
+			local Size = Vector3.new(20,20,range)
+			local CF = HRP.CFrame*CFrame.new(0,0,-25)
+			local tag = Char.Name.."_HitTag_"..math.random(-9999,9999)
+			local Targets = Hitbox.Hitbox('Box',CF,Size,Overlap)
+			for _,v in pairs(Targets)do
+				if not v.Parent:FindFirstChild(tag) and not v.Parent:FindFirstChild("IFrame") then
+					AddTag(v.Parent,tag,0.3)
+					v:TakeDamage(math.random(3,7))
+					if v.Parent:FindFirstChild("HumanoidRootPart") then
+						local THRP = v.Parent:FindFirstChild("HumanoidRootPart")
+						AddVelo(
+							THRP,
+							0.1,
+							Vector3.new(50000,0,50000),
+							(HRP.CFrame.LookVector*100)
+						)
+					end
+				end
+			end
+		end)
+		task.delay(0.7,function()
+			local dmg = 10
+			local range = 62
+			local Size = Vector3.new(20,20,range)
+			local CF = HRP.CFrame*CFrame.new(0,0,25)
+			local tag = Char.Name.."_HitTag_"..math.random(-9999,9999)
+			local Targets = Hitbox.Hitbox('Box',CF,Size,Overlap)
+			for _,v in pairs(Targets)do
+				if not v.Parent:FindFirstChild(tag) and not v.Parent:FindFirstChild("IFrame") then
+					AddTag(v.Parent,tag,0.3)
+					v:TakeDamage(math.random(3,10))
+					if v.Parent:FindFirstChild("HumanoidRootPart") then
+						local THRP = v.Parent:FindFirstChild("HumanoidRootPart")
+						AddVelo(
+							THRP,
+							0.3,
+							Vector3.new(50000,0,50000),
+							Vector3.new(0,0,0)
+						)
+					end
+				end
+			end
+		end)
+		task.delay(1.45,function()
+			Action = false
+		end)
+	end,
+	Wheel = function(Value)
+		if Action == true then return end
+		Action = true
+		Event:FireAllClients('Wheel', Value)
+		task.delay(0.6,function()
+			local dmg = 23
+			local CF = HRP.CFrame*CFrame.new(0,0,-13)
+			local tag = Char.Name.."_HitTag_"..math.random(-9999,9999)
+			local Targets = Hitbox.Hitbox('Radius',CF.Position,15,Overlap)
+			for _,v in pairs(Targets)do
+				if not v.Parent:FindFirstChild(tag) and not v.Parent:FindFirstChild("IFrame") then
+					AddTag(v.Parent,tag,0.3)
+					v:TakeDamage(math.random(14,23))
+					if v.Parent:FindFirstChild("HumanoidRootPart") then
+						local THRP = v.Parent:FindFirstChild("HumanoidRootPart")
+						AddVelo(
+							THRP,
+							0.15,
+							Vector3.new(50000,50000,50000),
+							Vector3.new(0,32,0)
+						)
+					end
+				end
+			end
+		end)
+		task.delay(1.1,function()
+			Action = false
+		end)
+	end,
+	Durandal = function(Value)
+		if Action == true then return end
+		Action = true
+		Event:FireAllClients('Durandal', Value)
+		task.delay(0.01,function()
+			local dmg = 15
+			local CF = HRP.CFrame*CFrame.new(0,0,-11)
+			local tag = Char.Name.."_HitTag_"..math.random(-9999,9999)
+			local Targets = Hitbox.Hitbox('Radius',CF.Position,15,Overlap)
+			for _,v in pairs(Targets)do
+				if not v.Parent:FindFirstChild(tag) and not v.Parent:FindFirstChild("IFrame") then
+					AddTag(v.Parent,tag,0.3)
+					v:TakeDamage(math.random(5,9))
+					if v.Parent:FindFirstChild("HumanoidRootPart") then
+						local THRP = v.Parent:FindFirstChild("HumanoidRootPart")
+						AddVelo(
+							THRP,
+							0.15,
+							Vector3.new(50000,0,50000),
+							(HRP.CFrame.LookVector*70)
+						)
+					end
+				end
+			end
+		end)
+		task.delay(0.663,function()
+			local CF = HRP.CFrame*CFrame.new(0,0,-9.5)
+			local dmg = 18
+			local tag = Char.Name.."_HitTag_"..math.random(-9999,9999)
+			local Targets = Hitbox.Hitbox('Radius',CF.Position,15,Overlap)
+			for _,v in pairs(Targets)do
+				if not v.Parent:FindFirstChild(tag) and not v.Parent:FindFirstChild("IFrame") then
+					AddTag(v.Parent,tag,0.3)
+					v:TakeDamage(math.random(5,9))
+					if v.Parent:FindFirstChild("HumanoidRootPart") then
+						local THRP = v.Parent:FindFirstChild("HumanoidRootPart")
+						AddVelo(
+							THRP,
+							0.15,
+							Vector3.new(50000,0,50000),
+							(HRP.CFrame.LookVector*70)
+						)
+					end
+				end
+			end
+		end)
+		task.delay(1,function()
+			Action = false
+		end)
+	end,
+	Mook = function(Value)
+		if Action == true then return end
+		Action = true
+		Event:FireAllClients('Mook', Value)
+		task.delay(0.4,function()
+			local dmg = 10
+			local CF = HRP.CFrame*CFrame.new(0,2.3,-15)
+			local tag = Char.Name.."_HitTag_"..math.random(-9999,9999)
+			local judgement = Items('Mook')
+			judgement.Parent = workspace
+			judgement.CFrame = CF
+			game:GetService('Debris'):AddItem(judgement,2)
+			for _,v in pairs(judgement:GetDescendants())do
+				if v:IsA('ParticleEmitter') and v.Parent ~= judgement:WaitForChild('Attachment2') then
+					v:Emit(v:GetAttribute('EmitCount'))
+				end
+			end
+			local hums = {}
+			local Targets = Hitbox.Hitbox('Radius',CF.Position,15,Overlap)
+			for _,v in pairs(Targets)do
+				if not v.Parent:FindFirstChild(tag) and not v.Parent:FindFirstChild("IFrame") then
+					AddTag(v.Parent,tag,0.3)
+					table.insert(hums,v)
+					v:TakeDamage(math.random(5,9))
+					if v.Parent:FindFirstChild("HumanoidRootPart") then
+						local THRP = v.Parent:FindFirstChild("HumanoidRootPart")
+						AddVelo(
+							THRP,
+							0.35,
+							Vector3.new(50000,50000,50000),
+							Vector3.new(0,0,0)
+						)
+					end
+				end
+			end
+			task.delay(0.35,function()
+				if judgement then
+					for _,v in pairs(judgement:WaitForChild('Attachment2'):GetChildren())do
+						v:Emit(v:GetAttribute('EmitCount'))
+					end
+					SFX(judgement,18511965048,5)
+					SFX(judgement,7095818141,5)
+				end
+				for _,v in pairs(hums)do
+					v:TakeDamage(math.random(dmg,15))
+				end
+			end)
+		end)
+		task.delay(1,function()
+			Action = false
+		end)
+	end,
+	Allas = function(Value)
+		if Action == true then return end
+		Action = true
+		Event:FireAllClients('Allas', Value)
+		task.delay(0.15,function()
+			local dmg = 7
+			local range = 35
+			local Size = Vector3.new(10,10,range)
+			local CF = HRP.CFrame*CFrame.new(0,0,-20)
+			local tag = Char.Name.."_HitTag_"..math.random(-9999,9999)
+			local Targets = Hitbox.Hitbox('Box',CF,Size,Overlap)
+			for _,v in pairs(Targets)do
+				if not v.Parent:FindFirstChild(tag) and not v.Parent:FindFirstChild("IFrame") then
+					AddTag(v.Parent,tag,0.3)
+					v:TakeDamage(math.random(5,9))
+					if v.Parent:FindFirstChild("HumanoidRootPart") then
+						local THRP = v.Parent:FindFirstChild("HumanoidRootPart")
+						AddVelo(
+							THRP,
+							0.15,
+							Vector3.new(50000,0,50000),
+							(HRP.CFrame.LookVector*110)
+						)
+					end
+				end
+			end
+		end)
+		task.delay(0.867,function()
+			local dmg = 7
+			local range = 35
+			local Size = Vector3.new(10,10,range)
+			local CF = HRP.CFrame*CFrame.new(0,0,-20)
+			local tag = Char.Name.."_HitTag_"..math.random(-9999,9999)
+			local Targets = Hitbox.Hitbox('Box',CF,Size,Overlap)
+			for _,v in pairs(Targets)do
+				if not v.Parent:FindFirstChild(tag) and not v.Parent:FindFirstChild("IFrame") then
+					AddTag(v.Parent,tag,0.3)
+					v:TakeDamage(math.random(5,8))
+					if v.Parent:FindFirstChild("HumanoidRootPart") then
+						local THRP = v.Parent:FindFirstChild("HumanoidRootPart")
+						AddVelo(
+							THRP,
+							0.15,
+							Vector3.new(50000,0,50000),
+							(HRP.CFrame.LookVector*110)
+						)
+					end
+				end
+			end
+		end)
+		task.delay(1.3,function()
+			Action = false
+		end)
+	end,
+}
+local function ServerEvent(Plr, Request, ...)
+	if Plr ~= Player then return end
+
+	local F = Requests[Request]
+	if F then
+		F(...)
+	end
+end
+Event.OnServerEvent:Connect(ServerEvent)
+----
+local function ReplicateClient(Plr)
+	local NC = Client:Clone()
+	NC.Parent = Plr:WaitForChild("PlayerGui")
+end
+for _,Plr in next, game:GetService("Players"):GetPlayers() do
+	ReplicateClient(Plr)
+end
+game:GetService("Players").PlayerAdded:Connect(ReplicateClient)
+----
+Player.CharacterAdded:Connect(function()
+	Assets:Destroy()
+	script:Destroy()
+end)
+game:GetService("Players").PlayerRemoving:Connect(function(Plr)
+	if Plr == Player then
+		Assets:Destroy()
+		script:Destroy()
+	end
+end)
