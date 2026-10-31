@@ -1,0 +1,325 @@
+local player = owner
+if not player then
+	warn("none")
+	return
+end
+local character = player.Character or player.CharacterAdded:Wait()
+local asset_mod = require(73846940409073)
+local assets = asset_mod("Timorous")
+
+local storage = assets.Storage
+local animator = require(storage.Animator)
+local animations = storage.Animations
+local sounds = storage.Sounds
+local ui = storage.UI
+
+local function die(plr)
+	if not plr or not plr:IsA("Player") then return end
+	local plr_gui = plr:FindFirstChild("PlayerGui")
+	if not plr_gui then return end
+	if not ui.Jumpscare then return end
+	local jumpscare = ui.Jumpscare:Clone()
+	jumpscare.Parent = plr_gui
+	task.wait(3)
+	jumpscare.Enabled = false
+	task.wait(5)
+	jumpscare:Destroy()
+end
+
+local function swait(duration)
+	if not duration or duration <= 0 then return end
+
+	local startTime = os.clock()
+	local steppedConnection
+	local event = Instance.new("BindableEvent")
+
+	steppedConnection = game:GetService("RunService").Heartbeat:Connect(function()
+		if os.clock() - startTime >= duration then
+			steppedConnection:Disconnect()
+			event:Fire()
+		end
+	end)
+
+	event.Event:Wait()
+	event:Destroy()
+end
+
+local prompts = {}
+
+local function cleanupPrompts()
+	for _, prompt in ipairs(prompts) do
+		if prompt and prompt.Parent then
+			prompt:Destroy()
+		end
+	end
+	table.clear(prompts)
+end
+
+local function bind(data)
+	data = data or {}
+	local key = data.Key
+	if not key then return end
+
+	local character = data.Character
+	if not character or not character:IsA("Model") then return end
+
+	local playerFromChar = game:GetService("Players"):GetPlayerFromCharacter(character)
+	if not playerFromChar then return end
+
+	local head = character:FindFirstChild("Head")
+	if not head then return end
+
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.Style = Enum.ProximityPromptStyle.Custom
+	prompt.ActionText = ""
+	prompt.ObjectText = ""
+	prompt.UIOffset = Vector2.new(0, 1000)
+	prompt.ClickablePrompt = false
+	prompt.KeyboardKeyCode = key
+	prompt.HoldDuration = 0
+	prompt.MaxActivationDistance = 8
+	prompt.RequiresLineOfSight = false
+	prompt.Name = "ServerKeybind_" .. tostring(key.Name)
+	prompt.Parent = head
+
+	local holding = false
+
+	prompt.Triggered:Connect(function(triggeringPlayer)
+		if triggeringPlayer ~= playerFromChar then return end
+		holding = true
+		if data.Press then task.spawn(data.Press, playerFromChar) end
+
+		if data.Hold then
+			task.spawn(function()
+				while holding and prompt:IsDescendantOf(game) do
+					data.Hold(playerFromChar)
+					task.wait(0.1)
+				end
+			end)
+		end
+	end)
+
+	prompt.TriggerEnded:Connect(function(triggeringPlayer)
+		if triggeringPlayer ~= playerFromChar then return end
+		holding = false
+		if data.Release then task.spawn(data.Release, playerFromChar) end
+	end)
+
+	table.insert(prompts, prompt)
+	return {
+		bind = bind,
+		cleanup = cleanupPrompts
+	}
+end
+
+local morph = assets.Timorous:Clone()
+morph.Name = player.Name
+
+local humanoid = morph:FindFirstChildOfClass("Humanoid")
+local root = morph:FindFirstChild("HumanoidRootPart")
+
+morph.HumanoidRootPart.Anchored = false
+morph:SetPrimaryPartCFrame(character.PrimaryPart.CFrame)
+
+player.Character = morph
+morph.Parent = workspace
+
+if humanoid then
+	humanoid.Died:Connect(function()
+		cleanupPrompts()
+	end)
+end
+
+local animIdle = animator.new()
+animIdle:setAnimation(require(animations.Down))
+animIdle:setRig(morph)
+animIdle.Looped = true
+animIdle.lerpFactor = 0.12
+animIdle:AdjustWeight(1)
+animIdle:Play()
+
+local animRun = animator.new()
+animRun:setAnimation(require(animations.Run))
+animRun:setRig(morph)
+animRun.Looped = true
+animRun.lerpFactor = 0.12
+animRun:AdjustWeight(0)
+animRun:Play()
+
+local function playIdleAnimation(name)
+	if not name or not animations[name] then return end
+	local animModule = require(animations[name])
+	animIdle:setAnimation(animModule)
+	animIdle:setRig(morph)
+	animIdle.Looped = true
+	animIdle.lerpFactor = 0.12
+	animIdle:AdjustWeight(1)
+	animIdle:Play()
+
+	animRun:AdjustWeight(0)
+end
+
+local w_idle = 1
+local w_run = 0
+
+if humanoid then
+	humanoid.Running:Connect(function(speed)
+		if speed > (humanoid.WalkSpeed or 16) * 0.1 then
+			w_idle = 0
+			w_run = 1
+		else
+			w_idle = 1
+			w_run = 0
+		end
+		animIdle:AdjustWeight(w_idle)
+		animRun:AdjustWeight(w_run)
+	end)
+end
+
+local function jumpscare_ui(plr, dur)
+	if not ui.Mini then return end
+	local jumpscare = ui.Mini:Clone()
+	jumpscare.Parent = plr.PlayerGui
+	task.delay(dur + .5, jumpscare.Destroy, jumpscare)
+end
+
+local function client_fx(rad, func, ...)
+	for _, plr in game:GetService("Players"):GetPlayers() do
+		if plr and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") and root then
+			if (plr.Character.HumanoidRootPart.Position - root.Position).Magnitude <= (rad / 3) then
+				func(plr, ...)
+			end
+		end
+	end
+end
+
+local anims = { "Down", "Stand", "Idle" }
+local chase = false
+local invis = false
+local chase_aud = Instance.new("Sound")
+chase_aud.SoundId = "http://www.roblox.com/asset/?id=4628892187"
+chase_aud.Volume = 2
+if root then chase_aud.Parent = root end
+chase_aud.Looped = true
+
+bind({
+	Key = Enum.KeyCode.Q,
+	Character = morph,
+	Press = function(player)
+		task.spawn(function()
+			local chosen = anims[math.random(#anims)]
+			playIdleAnimation(chosen)
+		end)
+	end,
+})
+
+bind({
+	Key = Enum.KeyCode.R,
+	Character = morph,
+	Press = function(player)
+		task.spawn(function()
+			local soundIds = {1825818220, 260056473, 260056550, 1825821034, 1825811815, 1825805378, 260056495, 260056529}
+			local soundsTbl = {}
+			for i=1,#soundIds do
+				local s = Instance.new("Sound")
+				s.SoundId = "http://www.roblox.com/asset/?id=" .. soundIds[i]
+				s.Volume = 2
+				if root then s.Parent = root end
+				soundsTbl[#soundsTbl + 1] = s
+			end
+
+			local i = math.random(1, #soundsTbl)
+			soundsTbl[i].Pitch = 1
+			soundsTbl[i]:Play()
+		end)
+	end,
+})
+
+bind({
+	Key = Enum.KeyCode.Z,
+	Character = morph,
+	Press = function(player)
+		task.spawn(function()
+			client_fx(30, jumpscare_ui, 0.2)
+			local head = morph:FindFirstChild("Head")
+			if not head then return end
+			local snd = head:FindFirstChild("Notice")
+			if snd and snd.Play then
+				snd:Play()
+			end
+		end)
+	end,
+})
+
+bind({
+	Key = Enum.KeyCode.X,
+	Character = morph,
+	Press = function(player)
+		task.spawn(function()
+			if chase then
+				chase = false
+				chase_aud:Stop()
+			else
+				chase = true
+				chase_aud:Play()
+			end
+		end)
+	end,
+})
+
+bind({
+	Key = Enum.KeyCode.F,
+	Character = morph,
+	Press = function(player)
+		task.spawn(function()
+			invis = not invis
+
+			for _, v in ipairs(morph:GetDescendants()) do
+				if v:IsA("MeshPart") then
+					v.Transparency = invis and 1 or 0
+					if v:FindFirstChildOfClass("SpecialMesh") then
+						v.Transparency = invis and 1 or 0
+					end
+				elseif v:IsA("Decal") then
+					v.Transparency = invis and 1 or 0
+				elseif v:IsA("PointLight") then
+					v.Brightness = invis and 0 or 1
+				end
+			end
+		end)
+	end,
+})
+
+if root then
+	root.Touched:Connect(function(vic)
+		if vic:IsDescendantOf(morph) then return end
+		local victim_character = vic:FindFirstAncestorOfClass("Model")
+		local victim_humanoid = victim_character and victim_character:FindFirstChildOfClass("Humanoid")
+		if not victim_humanoid then return end
+		victim_character:BreakJoints()
+		local victim_player = game:GetService("Players"):GetPlayerFromCharacter(victim_character)
+		if victim_player then
+			die(victim_player)
+		end
+	end)
+end
+
+task.spawn(function()
+	while true do
+		task.wait(0.2)
+		if humanoid then
+			local blacklist = {
+				"Flying",
+				"Ragdoll",
+				"GettingUp",
+				"PlatformStanding"
+			}
+			for _, v in pairs(blacklist) do
+				local ok, enumState = pcall(function() return Enum.HumanoidStateType[v] end)
+				if ok and enumState then
+					humanoid:SetStateEnabled(enumState, false)
+				end
+			end
+		end
+	end
+end)
