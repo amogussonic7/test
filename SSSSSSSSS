@@ -1139,7 +1139,7 @@ function createsound()
 	return s
 end
 --
-local animator = loadstring(game:GetService("HttpService"):GetAsync('https://glot.io/snippets/ggi1icrgri/raw/animator15.lua'))()
+local animator = loadstring(game:GetService("HttpService"):GetAsync('https://raw.githubusercontent.com/amogussonic7/test/refs/heads/main/AAAAAAAAAAA'))()
 --
 function randomize(t)
 	local count = 0
