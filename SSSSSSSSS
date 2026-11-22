@@ -1,0 +1,1334 @@
+local d=Instance.new"Model"
+d.Name="Pose"
+d.WorldPivot=CFrame.new(0,-100,0)
+local e=Instance.new"Part"
+e.Name="Head"
+e.Anchored=true
+e.AssemblyAngularVelocity=Vector3.new(3.200426306193549e-07,-5.842519801291246e-09,1.0491552870917076e-07)
+e.AssemblyLinearVelocity=Vector3.new(-1.5432239308665885e-07,0.00007812227704562247,4.7516317636109306e-07)
+e.Velocity=Vector3.new(-1.5432239308665885e-07,0.00007812227704562247,4.7516317636109306e-07)
+e.Transparency=-1000
+e.TopSurface=0
+e.Color=Color3.fromRGB(248,248,248)
+e.CollisionGroupId=1
+e.RotVelocity=Vector3.new(3.200426306193549e-07,-5.842519801291246e-09,1.0491552870917076e-07)
+e.Size=Vector3.new(1,1,1)
+e.Locked=true
+e.CFrame=CFrame.new(0,-98.5,0)
+e.Parent=d
+local f=Instance.new"Part"
+f.Name="Torso"
+f.RightParamB=0
+f.Anchored=true
+f.AssemblyAngularVelocity=Vector3.new(3.200426306193549e-07,-5.842519801291246e-09,1.0491552870917076e-07)
+f.AssemblyLinearVelocity=Vector3.new(1.364626744937425e-09,0.00007807890506228432,-2.172111823739442e-09)
+f.Velocity=Vector3.new(1.364626744937425e-09,0.00007807890506228432,-2.172111823739442e-09)
+f.RightParamA=0
+f.Color=Color3.fromRGB(17,17,17)
+f.CollisionGroupId=1
+f.RotVelocity=Vector3.new(3.200426306193549e-07,-5.842519801291246e-09,1.0491552870917076e-07)
+f.RightSurface=2
+f.Size=Vector3.new(2,2,1)
+f.Locked=true
+f.LeftSurface=2
+f.CFrame=CFrame.new(0,-100,0,0.8660519123077393,0,-0.49995407462120056,0,1,0,0.49995407462120056,0,0.8660519123077393)
+f.LeftParamB=0
+f.LeftParamA=0
+f.Parent=d
+local g=Instance.new"Part"
+g.Name="Left Arm"
+g.Anchored=true
+g.AssemblyAngularVelocity=Vector3.new(3.200426306193549e-07,-5.842519801291246e-09,1.0491552870917076e-07)
+g.AssemblyLinearVelocity=Vector3.new(-4.2174324477173286e-08,0.00007772372919134796,1.108635245827827e-07)
+g.Velocity=Vector3.new(-4.2174324477173286e-08,0.00007772372919134796,1.108635245827827e-07)
+g.Color=Color3.fromRGB(248,248,248)
+g.CollisionGroupId=1
+g.RotVelocity=Vector3.new(3.200426306193549e-07,-5.842519801291246e-09,1.0491552870917076e-07)
+g.Size=Vector3.new(1,2,1)
+g.Locked=true
+g.CFrame=CFrame.new(-0.15554018318653107,-99.82162475585938,-0.9736778736114502,0.2706316113471985,-0.8749576210975647,0.4015064835548401,-0.5450903177261353,-0.4830452799797058,-0.6852325797080994,0.7934951782226562,-0.03341153264045715,-0.6076585054397583)
+g.Parent=d
+local h=Instance.new"Part"
+h.Name="Right Arm"
+h.Anchored=true
+h.AssemblyAngularVelocity=Vector3.new(3.200426306193549e-07,-5.842519801291246e-09,1.0491552870917076e-07)
+h.AssemblyLinearVelocity=Vector3.new(-6.511364780692475e-09,0.00007831614493625239,3.5064896763969955e-08)
+h.Velocity=Vector3.new(-6.511364780692475e-09,0.00007831614493625239,3.5064896763969955e-08)
+h.Color=Color3.fromRGB(248,248,248)
+h.CollisionGroupId=1
+h.RotVelocity=Vector3.new(3.200426306193549e-07,-5.842519801291246e-09,1.0491552870917076e-07)
+h.Size=Vector3.new(1,2,1)
+h.Locked=true
+h.CFrame=CFrame.new(0.9864915609359741,-100.0334701538086,-0.57476806640625,0.6495563387870789,0.6249891519546509,0.43297260999679565,0.7499738335609436,-0.43308699131011963,-0.49997490644454956,-0.12496399879455566,0.6494799256324768,-0.75003981590271)
+h.Parent=d
+local i=Instance.new"Part"
+i.Name="Left Leg"
+i.Anchored=true
+i.AssemblyAngularVelocity=Vector3.new(3.200426306193549e-07,-5.842519801291246e-09,1.0491552870917076e-07)
+i.BottomSurface=0
+i.AssemblyLinearVelocity=Vector3.new(2.0064508987616136e-07,0.0000778951944084838,-6.203033535712166e-07)
+i.Velocity=Vector3.new(2.0064508987616136e-07,0.0000778951944084838,-6.203033535712166e-07)
+i.Color=Color3.fromRGB(17,17,17)
+i.CollisionGroupId=1
+i.RotVelocity=Vector3.new(3.200426306193549e-07,-5.842519801291246e-09,1.0491552870917076e-07)
+i.Size=Vector3.new(1,2,1)
+i.Locked=true
+i.CFrame=CFrame.new(-0.43302595615386963,-102,-0.24997711181640625,0.8660519123077393,0,-0.49995407462120056,0,1,0,0.49995407462120056,0,0.8660519123077393)
+i.Parent=d
+local j=Instance.new"Part"
+j.Name="Right Leg"
+j.Anchored=true
+j.AssemblyAngularVelocity=Vector3.new(3.200426306193549e-07,-5.842519801291246e-09,1.0491552870917076e-07)
+j.BottomSurface=0
+j.AssemblyLinearVelocity=Vector3.new(2.1390484050698433e-07,0.0000780840273364447,-6.502362452920352e-07)
+j.Velocity=Vector3.new(2.1390484050698433e-07,0.0000780840273364447,-6.502362452920352e-07)
+j.Color=Color3.fromRGB(17,17,17)
+j.CollisionGroupId=1
+j.RotVelocity=Vector3.new(3.200426306193549e-07,-5.842519801291246e-09,1.0491552870917076e-07)
+j.Size=Vector3.new(1,2,1)
+j.Locked=true
+j.CFrame=CFrame.new(0.433025985956192,-102,0.24997711181640625,0.8660519123077393,0,-0.49995407462120056,0,1,0,0.49995407462120056,0,0.8660519123077393)
+j.Parent=d
+local posecf = {}
+for i,v in pairs(d:children()) do
+	if v:IsA("BasePart") then
+		posecf[v.Name] = v.CFrame
+	end
+end
+d:Destroy()
+local hdesc = Instance.new("HumanoidDescription")
+function sugarcoat(plr,who)
+	local a=Instance.new"ScreenGui"
+	a.Name="SugerCoated"
+	a.ZIndexBehavior=1
+	a.ScreenInsets=1
+	a.IgnoreGuiInset=true
+	a.DisplayOrder=1
+	local b=Instance.new"ViewportFrame"
+	b.AnchorPoint=Vector2.new(0.5,0.5)
+	b.Size=UDim2.new(1,0,1,0)
+	b.BackgroundTransparency=1
+	b.Position=UDim2.new(0.5,0,0.5,0)
+	b.BorderSizePixel=0
+	b.BackgroundColor3=Color3.fromRGB(0,0,0)
+	b.Parent=a
+	local c=Instance.new"WorldModel"
+	c.WorldPivot=CFrame.new(-0.2282191514968872,-99.93209838867188,0.18964064121246338,0.6495563387870789,0.6249891519546509,0.43297260999679565,0.7499738335609436,-0.43308699131011963,-0.49997490644454956,-0.12496399879455566,0.6494799256324768,-0.75003981590271)
+	c.Parent=b
+	local m=Instance.new"ImageLabel"
+	m.Name="Background"
+	m.ZIndex=0
+	m.Size=UDim2.new(1,0,1,0)
+	m.BackgroundTransparency=1
+	m.BackgroundColor3=Color3.fromRGB(255,255,255)
+	m.ScaleType=2
+	m.ImageColor3=Color3.fromRGB(138,0,0)
+	m.TileSize=UDim2.new(0.125,0,0.25,0)
+	m.Image="rbxassetid://10595199034"
+	m.Parent=a
+	local n=Instance.new"TextBox"
+	n.Name="Text"
+	n.AnchorPoint=Vector2.new(0.5,0.5)
+	n.Size=UDim2.new(0.7,0,0.3341493,0)
+	n.BackgroundTransparency=1
+	n.Position=UDim2.new(0.5,0,0.1670747,0)
+	n.BackgroundColor3=Color3.fromRGB(255,255,255)
+	n.FontSize=5
+	n.TextStrokeTransparency=0
+	n.TextSize=14
+	n.TextColor3=Color3.fromRGB(170,0,0)
+	n.Text="I'M NOT GONNA SUGARCOAT IT."
+	n.TextWrapped=true
+	n.Font=38
+	n.ClearTextOnFocus = true
+	n.TextWrap=true
+	n.TextStrokeColor3=Color3.fromRGB(255,255,255)
+	n.TextScaled=true
+	n.Parent=a
+	n.TextEditable = false
+	local o=Instance.new"TextBox"
+	o.Name="M1"
+	o.ClearTextOnFocus = false
+	o.AnchorPoint=Vector2.new(0.5,1)
+	o.Size=UDim2.new(0.5,0,0.25,0)
+	o.BackgroundTransparency=1
+	o.Position=UDim2.new(0.5,0,1,0)
+	o.BackgroundColor3=Color3.fromRGB(255,255,255)
+	o.FontSize=5
+	o.TextStrokeTransparency=0
+	o.TextSize=14
+	o.TextColor3=Color3.fromRGB(170,0,0)
+	o.Text="W + M1"
+	o.TextEditable = false
+	o.TextWrapped=true
+	o.Font=38
+	o.TextWrap=true
+	o.TextStrokeColor3=Color3.fromRGB(255,255,255)
+	o.TextScaled=true
+	o.Parent=a
+	local p=Instance.new"Camera"
+	p.CFrame=CFrame.new(0,-98.5,-4,-1,0,0,0,1,0,0,0,-1)
+	p.CoordinateFrame=CFrame.new(0,-98.5,-4,-1,0,0,0,1,0,0,0,-1)
+	p.Parent=a
+	local q=Instance.new"Sound"
+	q.Name="Damn"
+	q.SoundId="rbxassetid://10595267188"
+	q.Parent=a
+	local r=Instance.new"Sound"
+	r.Name="VineBoom"
+	r.SoundId="rbxassetid://8650377718"
+	r.Parent=a
+	b.CurrentCamera=p
+	local loacle = Instance.new("LocalScript")
+	loacle.Name = "SugerCoat"
+	a.Parent = loacle
+	q:Play()
+	r:Play()
+	if who then
+		local char = game:GetService("Players"):CreateHumanoidModelFromDescription(hdesc,"R6")
+		for i,v in pairs(who:children()) do
+			if v:IsA("Accessory") or v:isA("Hat") or v:isA("CharacterMesh") or v:isA("BodyColors") or v:isA("Clothing") then
+				v:Clone().Parent = char
+			end
+		end
+		local h = char:WaitForChild("Head")
+		local f = h:FindFirstChild("face")
+		if f then
+		       f.Texture = "rbxassetid://41675658"
+		 end
+		for i,v in pairs(char:children()) do
+			if v:IsA("BasePart") and posecf[v.Name] then
+				v.CFrame = posecf[v.Name]
+				v.Anchored =true
+			end
+		end
+		char.Parent = c
+	end
+	local te = {}
+	for i,v in pairs(a:GetDescendants()) do
+		if v:IsA("TextBox") then
+			table.insert(te,game:GetService("TweenService"):Create(v,TweenInfo.new(.7),{TextTransparency = 1,TextStrokeTransparency = 1}))
+		end
+		if v:IsA("ImageLabel") or v:IsA("ViewportFrame") then
+			table.insert(te,game:GetService("TweenService"):Create(v,TweenInfo.new(.7),{ImageTransparency = 1}))
+		end
+	end
+	if plr:WaitForChild("PlayerGui"):FindFirstChild'SugerCoat' then
+	        plr:WaitForChild("PlayerGui"):FindFirstChild'SugerCoat':Destroy()
+	end
+	loacle.Parent = plr:WaitForChild("PlayerGui")
+	task.wait(.2)
+	for i,v in pairs(te) do
+		v:Play()
+	end
+	game:GetService("Debris"):AddItem(a,6)
+end
+--
+local anims1 = {}
+anims1.swing = {
+	Properties = {
+		Looping = false,
+		Priority = Enum.AnimationPriority.Action,
+		Markers = {
+		},
+	},
+	Keyframes = {
+		[0] = {
+			["HumanoidRootPart"] = {
+				Style = 'Linear',
+				Direction = 'In',
+				CFrame = CFrame.new(),
+				["Torso"] = {
+					Style = 'Linear',
+					Direction = 'In',
+					CFrame = CFrame.new(),
+					["Left Leg"] = {
+						Style = 'Linear',
+						Direction = 'In',
+					},
+					["Right Leg"] = {
+						Style = 'Linear',
+						Direction = 'In',
+					},
+					["Left Arm"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.new(),
+					},
+					["Right Arm"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.new(),
+					},
+					["Head"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.new(),
+					},
+				},
+			},
+		},
+		[0.017] = {
+			["HumanoidRootPart"] = {
+				Style = 'Linear',
+				Direction = 'In',
+				CFrame = CFrame.new(),
+				["Torso"] = {
+					Style = 'Linear',
+					Direction = 'In',
+					CFrame = CFrame.new(-0.001, 0.003, 0) * CFrame.Angles(math.rad(-0.229), math.rad(-0.057), math.rad(-1.089)),
+					["Left Leg"] = {
+						Style = 'Linear',
+						Direction = 'In',
+					},
+					["Right Leg"] = {
+						Style = 'Linear',
+						Direction = 'In',
+					},
+					["Left Arm"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.Angles(0, math.rad(0.859), math.rad(-1.948)),
+					},
+					["Right Arm"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.new(-0.01, 0.001, 0.004) * CFrame.Angles(math.rad(0.172), math.rad(0.516), math.rad(1.432)),
+					},
+					["Head"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.Angles(math.rad(0.229), math.rad(0.057), math.rad(1.089)),
+					},
+				},
+			},
+		},
+		[0.033] = {
+			["HumanoidRootPart"] = {
+				Style = 'Linear',
+				Direction = 'In',
+				CFrame = CFrame.new(),
+				["Torso"] = {
+					Style = 'Linear',
+					Direction = 'In',
+					CFrame = CFrame.new(-0.003, 0.012, 0) * CFrame.Angles(math.rad(-0.859), math.rad(-0.229), math.rad(-4.125)),
+					["Left Leg"] = {
+						Style = 'Linear',
+						Direction = 'In',
+					},
+					["Right Leg"] = {
+						Style = 'Linear',
+						Direction = 'In',
+					},
+					["Left Arm"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.Angles(math.rad(0.172), math.rad(3.38), math.rad(-7.448)),
+					},
+					["Right Arm"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.new(-0.037, 0.003, 0.016) * CFrame.Angles(math.rad(0.516), math.rad(1.891), math.rad(5.5)),
+					},
+					["Head"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.Angles(math.rad(0.917), math.rad(0.286), math.rad(4.011)),
+					},
+				},
+			},
+		},
+		[0.05] = {
+			["HumanoidRootPart"] = {
+				Style = 'Linear',
+				Direction = 'In',
+				CFrame = CFrame.new(),
+				["Torso"] = {
+					Style = 'Linear',
+					Direction = 'In',
+					CFrame = CFrame.new(-0.006, 0.026, 0) * CFrame.Angles(math.rad(-1.833), math.rad(-0.401), math.rad(-8.652)),
+					["Left Leg"] = {
+						Style = 'Linear',
+						Direction = 'In',
+					},
+					["Right Leg"] = {
+						Style = 'Linear',
+						Direction = 'In',
+					},
+					["Left Arm"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.Angles(math.rad(0.917), math.rad(7.277), math.rad(-16.157)),
+					},
+					["Right Arm"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.new(-0.077, 0.007, 0.033) * CFrame.Angles(math.rad(0.859), math.rad(4.068), math.rad(11.803)),
+					},
+					["Head"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.Angles(math.rad(1.948), math.rad(0.63), math.rad(8.365)),
+					},
+				},
+			},
+		},
+		[0.067] = {
+			["HumanoidRootPart"] = {
+				Style = 'Linear',
+				Direction = 'In',
+				CFrame = CFrame.new(),
+				["Torso"] = {
+					Style = 'Linear',
+					Direction = 'In',
+					CFrame = CFrame.new(-0.008, 0.043, -0.001) * CFrame.Angles(math.rad(-3.094), math.rad(-0.573), math.rad(-14.324)),
+					["Left Leg"] = {
+						Style = 'Linear',
+						Direction = 'In',
+					},
+					["Right Leg"] = {
+						Style = 'Linear',
+						Direction = 'In',
+					},
+					["Left Arm"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.Angles(math.rad(2.75), math.rad(12.147), math.rad(-27.788)),
+					},
+					["Right Arm"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.new(-0.127, 0.011, 0.054) * CFrame.Angles(math.rad(0.974), math.rad(6.818), math.rad(19.882)),
+					},
+					["Head"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.Angles(math.rad(3.151), math.rad(1.203), math.rad(13.808)),
+					},
+				},
+			},
+		},
+		[0.083] = {
+			["HumanoidRootPart"] = {
+				Style = 'Linear',
+				Direction = 'In',
+				CFrame = CFrame.new(),
+				["Torso"] = {
+					Style = 'Linear',
+					Direction = 'In',
+					CFrame = CFrame.new(-0.009, 0.062, -0.002) * CFrame.Angles(math.rad(-4.469), math.rad(-0.63), math.rad(-20.684)),
+					["Left Leg"] = {
+						Style = 'Linear',
+						Direction = 'In',
+					},
+					["Right Leg"] = {
+						Style = 'Linear',
+						Direction = 'In',
+					},
+					["Left Arm"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.Angles(math.rad(6.073), math.rad(17.189), math.rad(-41.883)),
+					},
+					["Right Arm"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.new(-0.183, 0.016, 0.077) * CFrame.Angles(math.rad(0.573), math.rad(9.969), math.rad(29.278)),
+					},
+					["Head"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.Angles(math.rad(4.469), math.rad(1.948), math.rad(19.882)),
+					},
+				},
+			},
+		},
+		[0.1] = {
+			["HumanoidRootPart"] = {
+				Style = 'Linear',
+				Direction = 'In',
+				CFrame = CFrame.new(),
+				["Torso"] = {
+					Style = 'Linear',
+					Direction = 'In',
+					CFrame = CFrame.new(-0.008, 0.083, -0.004) * CFrame.Angles(math.rad(-5.901), math.rad(-0.573), math.rad(-27.215)),
+					["Left Leg"] = {
+						Style = 'Linear',
+						Direction = 'In',
+					},
+					["Right Leg"] = {
+						Style = 'Linear',
+						Direction = 'In',
+					},
+					["Left Arm"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.Angles(math.rad(10.829), math.rad(21.601), math.rad(-57.41)),
+					},
+					["Right Arm"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.new(-0.241, 0.021, 0.101) * CFrame.Angles(math.rad(-0.458), math.rad(13.063), math.rad(39.534)),
+					},
+					["Head"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.Angles(math.rad(5.672), math.rad(2.865), math.rad(26.127)),
+					},
+				},
+			},
+		},
+		[0.117] = {
+			["HumanoidRootPart"] = {
+				Style = 'Linear',
+				Direction = 'In',
+				CFrame = CFrame.new(),
+				["Torso"] = {
+					Style = 'Linear',
+					Direction = 'In',
+					CFrame = CFrame.new(-0.005, 0.102, -0.007) * CFrame.Angles(math.rad(-7.334), math.rad(-0.401), math.rad(-33.575)),
+					["Left Leg"] = {
+						Style = 'Linear',
+						Direction = 'In',
+					},
+					["Right Leg"] = {
+						Style = 'Linear',
+						Direction = 'In',
+					},
+					["Left Arm"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.Angles(math.rad(16.444), math.rad(24.523), math.rad(-72.88)),
+					},
+					["Right Arm"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.new(-0.296, 0.026, 0.125) * CFrame.Angles(math.rad(-2.005), math.rad(15.871), math.rad(49.962)),
+					},
+					["Head"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.Angles(math.rad(6.761), math.rad(3.896), math.rad(32.2)),
+					},
+				},
+			},
+		},
+		[0.133] = {
+			["HumanoidRootPart"] = {
+				Style = 'Linear',
+				Direction = 'In',
+				CFrame = CFrame.new(),
+				["Torso"] = {
+					Style = 'Linear',
+					Direction = 'In',
+					CFrame = CFrame.new(-0.003, 0.119, -0.009) * CFrame.Angles(math.rad(-8.594), math.rad(-0.229), math.rad(-39.248)),
+					["Left Leg"] = {
+						Style = 'Linear',
+						Direction = 'In',
+					},
+					["Right Leg"] = {
+						Style = 'Linear',
+						Direction = 'In',
+					},
+					["Left Arm"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.Angles(math.rad(21.658), math.rad(26.012), math.rad(-86.574)),
+					},
+					["Right Arm"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.new(-0.346, 0.03, 0.146) * CFrame.Angles(math.rad(-3.953), math.rad(18.048), math.rad(60.103)),
+					},
+					["Head"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.Angles(math.rad(7.678), math.rad(4.927), math.rad(37.586)),
+					},
+				},
+			},
+		},
+		[0.15] = {
+			["HumanoidRootPart"] = {
+				Style = 'Linear',
+				Direction = 'In',
+				CFrame = CFrame.new(),
+				["Torso"] = {
+					Style = 'Linear',
+					Direction = 'In',
+					CFrame = CFrame.new(-0.001, 0.134, -0.011) * CFrame.Angles(math.rad(-9.626), math.rad(-0.057), math.rad(-43.889)),
+					["Left Leg"] = {
+						Style = 'Linear',
+						Direction = 'In',
+					},
+					["Right Leg"] = {
+						Style = 'Linear',
+						Direction = 'In',
+					},
+					["Left Arm"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.Angles(math.rad(25.669), math.rad(26.643), math.rad(-97.174)),
+					},
+					["Right Arm"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.new(-0.387, 0.034, 0.163) * CFrame.Angles(math.rad(-5.901), math.rad(19.423), math.rad(69.271)),
+					},
+					["Head"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.Angles(math.rad(8.308), math.rad(5.787), math.rad(41.998)),
+					},
+				},
+			},
+		},
+		[0.167] = {
+			["HumanoidRootPart"] = {
+				Style = 'Linear',
+				Direction = 'In',
+				CFrame = CFrame.new(),
+				["Torso"] = {
+					Style = 'Linear',
+					Direction = 'In',
+					CFrame = CFrame.new(-0.001, 0.145, -0.013) * CFrame.Angles(math.rad(-10.485), math.rad(-0.115), math.rad(-47.154)),
+					["Left Leg"] = {
+						Style = 'Linear',
+						Direction = 'In',
+					},
+					["Right Leg"] = {
+						Style = 'Linear',
+						Direction = 'In',
+					},
+					["Left Arm"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.Angles(math.rad(27.96), math.rad(27.044), math.rad(-103.992)),
+					},
+					["Right Arm"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.new(-0.414, 0.036, 0.174) * CFrame.Angles(math.rad(-7.678), math.rad(20.111), math.rad(77.063)),
+					},
+					["Head"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.Angles(math.rad(8.766), math.rad(6.417), math.rad(45.149)),
+					},
+				},
+			},
+		},
+		[0.183] = {
+			["HumanoidRootPart"] = {
+				Style = 'Linear',
+				Direction = 'In',
+				CFrame = CFrame.new(),
+				["Torso"] = {
+					Style = 'Linear',
+					Direction = 'In',
+					CFrame = CFrame.new(-0.006, 0.152, -0.015) * CFrame.Angles(math.rad(-11.001), math.rad(-0.401), math.rad(-48.759)),
+					["Left Leg"] = {
+						Style = 'Linear',
+						Direction = 'In',
+					},
+					["Right Leg"] = {
+						Style = 'Linear',
+						Direction = 'In',
+					},
+					["Left Arm"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.Angles(math.rad(28.247), math.rad(27.846), math.rad(-106.456)),
+					},
+					["Right Arm"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.new(-0.424, 0.037, 0.178) * CFrame.Angles(math.rad(-8.881), math.rad(20.111), math.rad(83.022)),
+					},
+					["Head"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.Angles(math.rad(8.938), math.rad(6.761), math.rad(46.639)),
+					},
+				},
+			},
+		},
+		[0.2] = {
+			["HumanoidRootPart"] = {
+				Style = 'Linear',
+				Direction = 'In',
+				CFrame = CFrame.new(),
+				["Torso"] = {
+					Style = 'Linear',
+					Direction = 'In',
+					CFrame = CFrame.new(0.014, 0.113, -0.01) * CFrame.Angles(math.rad(-8.136), math.rad(-3.495), math.rad(-34.893)),
+					["Left Leg"] = {
+						Style = 'Linear',
+						Direction = 'In',
+					},
+					["Right Leg"] = {
+						Style = 'Linear',
+						Direction = 'In',
+					},
+					["Left Arm"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.new(0.03, -0.055, 0.003) * CFrame.Angles(math.rad(15.527), math.rad(31.112), math.rad(-83.881)),
+					},
+					["Right Arm"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.new(-0.265, 0.023, 0.077) * CFrame.Angles(math.rad(-7.907), math.rad(14.381), math.rad(87.147)),
+					},
+					["Head"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.Angles(math.rad(7.506), math.rad(4.756), math.rad(32.143)),
+					},
+				},
+			},
+		},
+		[0.217] = {
+			["HumanoidRootPart"] = {
+				Style = 'Linear',
+				Direction = 'In',
+				CFrame = CFrame.new(),
+				["Torso"] = {
+					Style = 'Linear',
+					Direction = 'In',
+					CFrame = CFrame.new(0.034, -0.024, -0.006) * CFrame.Angles(math.rad(1.719), math.rad(-6.704), math.rad(2.177)),
+					["Left Leg"] = {
+						Style = 'Linear',
+						Direction = 'In',
+					},
+					["Right Leg"] = {
+						Style = 'Linear',
+						Direction = 'In',
+					},
+					["Left Arm"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.new(0.096, -0.175, 0.009) * CFrame.Angles(math.rad(-14.668), math.rad(15.527), math.rad(-21.371)),
+					},
+					["Right Arm"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.new(0.063, 0.009, -0.023) * CFrame.Angles(math.rad(-4.584), math.rad(-0.516), math.rad(93.793)),
+					},
+					["Head"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.Angles(math.rad(2.005), math.rad(1.776), math.rad(-5.329)),
+					},
+				},
+			},
+		},
+		[0.233] = {
+			["HumanoidRootPart"] = {
+				Style = 'Linear',
+				Direction = 'In',
+				CFrame = CFrame.new(),
+				["Torso"] = {
+					Style = 'Linear',
+					Direction = 'In',
+					CFrame = CFrame.new(0.023, -0.162, -0.018) * CFrame.Angles(math.rad(11.746), math.rad(-2.922), math.rad(41.425)),
+					["Left Leg"] = {
+						Style = 'Linear',
+						Direction = 'In',
+					},
+					["Right Leg"] = {
+						Style = 'Linear',
+						Direction = 'In',
+					},
+					["Left Arm"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.new(0.161, -0.295, 0.015) * CFrame.Angles(math.rad(-16.902), math.rad(-16.043), math.rad(29.507)),
+					},
+					["Right Arm"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.new(0.358, 0.025, 0.015) * CFrame.Angles(math.rad(1.146), math.rad(-19.194), math.rad(106.685)),
+					},
+					["Head"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.Angles(math.rad(-4.125), math.rad(2.807), math.rad(-43.258)),
+					},
+				},
+			},
+		},
+		[0.25] = {
+			["HumanoidRootPart"] = {
+				Style = 'Linear',
+				Direction = 'In',
+				CFrame = CFrame.new(),
+				["Torso"] = {
+					Style = 'Linear',
+					Direction = 'In',
+					CFrame = CFrame.new(0.008, -0.204, -0.026) * CFrame.Angles(math.rad(14.725), math.rad(0.516), math.rad(59.129)),
+					["Left Leg"] = {
+						Style = 'Linear',
+						Direction = 'In',
+					},
+					["Right Leg"] = {
+						Style = 'Linear',
+						Direction = 'In',
+					},
+					["Left Arm"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.new(0.191, -0.349, 0.017) * CFrame.Angles(math.rad(-10.6), math.rad(-25.497), math.rad(49.217)),
+					},
+					["Right Arm"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.new(0.483, 0.041, 0.052) * CFrame.Angles(math.rad(5.787), math.rad(-27.903), math.rad(115.165)),
+					},
+					["Head"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.Angles(math.rad(-6.131), math.rad(4.297), math.rad(-59.53)),
+					},
+				},
+			},
+		},
+		[0.267] = {
+			["HumanoidRootPart"] = {
+				Style = 'Linear',
+				Direction = 'In',
+				CFrame = CFrame.new(),
+				["Torso"] = {
+					Style = 'Linear',
+					Direction = 'In',
+					CFrame = CFrame.new(0.012, -0.207, -0.027) * CFrame.Angles(math.rad(15.011), math.rad(0.859), math.rad(62.567)),
+					["Left Leg"] = {
+						Style = 'Linear',
+						Direction = 'In',
+					},
+					["Right Leg"] = {
+						Style = 'Linear',
+						Direction = 'In',
+					},
+					["Left Arm"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.new(0.191, -0.349, 0.017) * CFrame.Angles(math.rad(-10.199), math.rad(-25.382), math.rad(50.42)),
+					},
+					["Right Arm"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.new(0.483, 0.041, 0.052) * CFrame.Angles(math.rad(5.787), math.rad(-27.903), math.rad(115.165)),
+					},
+					["Head"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.Angles(math.rad(-5.959), math.rad(4.354), math.rad(-61.478)),
+					},
+				},
+			},
+		},
+		[0.283] = {
+			["HumanoidRootPart"] = {
+				Style = 'Linear',
+				Direction = 'In',
+				CFrame = CFrame.new(),
+				["Torso"] = {
+					Style = 'Linear',
+					Direction = 'In',
+					CFrame = CFrame.new(0.016, -0.209, -0.028) * CFrame.Angles(math.rad(15.183), math.rad(1.146), math.rad(65.26)),
+					["Left Leg"] = {
+						Style = 'Linear',
+						Direction = 'In',
+					},
+					["Right Leg"] = {
+						Style = 'Linear',
+						Direction = 'In',
+					},
+					["Left Arm"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.new(0.191, -0.349, 0.017) * CFrame.Angles(math.rad(-9.855), math.rad(-25.153), math.rad(51.394)),
+					},
+					["Right Arm"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.new(0.483, 0.041, 0.052) * CFrame.Angles(math.rad(5.787), math.rad(-27.903), math.rad(115.165)),
+					},
+					["Head"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.Angles(math.rad(-5.73), math.rad(4.354), math.rad(-63.025)),
+					},
+				},
+			},
+		},
+		[0.3] = {
+			["HumanoidRootPart"] = {
+				Style = 'Linear',
+				Direction = 'In',
+				CFrame = CFrame.new(),
+				["Torso"] = {
+					Style = 'Linear',
+					Direction = 'In',
+					CFrame = CFrame.new(0.02, -0.211, -0.029) * CFrame.Angles(math.rad(15.298), math.rad(1.432), math.rad(67.437)),
+					["Left Leg"] = {
+						Style = 'Linear',
+						Direction = 'In',
+					},
+					["Right Leg"] = {
+						Style = 'Linear',
+						Direction = 'In',
+					},
+					["Left Arm"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.new(0.191, -0.349, 0.017) * CFrame.Angles(math.rad(-9.454), math.rad(-24.809), math.rad(52.196)),
+					},
+					["Right Arm"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.new(0.483, 0.041, 0.052) * CFrame.Angles(math.rad(5.787), math.rad(-27.903), math.rad(115.165)),
+					},
+					["Head"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.Angles(math.rad(-5.443), math.rad(4.297), math.rad(-64.171)),
+					},
+				},
+			},
+		},
+		[0.317] = {
+			["HumanoidRootPart"] = {
+				Style = 'Linear',
+				Direction = 'In',
+				CFrame = CFrame.new(),
+				["Torso"] = {
+					Style = 'Linear',
+					Direction = 'In',
+					CFrame = CFrame.new(0.022, -0.213, -0.029) * CFrame.Angles(math.rad(15.47), math.rad(1.604), math.rad(69.099)),
+					["Left Leg"] = {
+						Style = 'Linear',
+						Direction = 'In',
+					},
+					["Right Leg"] = {
+						Style = 'Linear',
+						Direction = 'In',
+					},
+					["Left Arm"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.new(0.191, -0.349, 0.017) * CFrame.Angles(math.rad(-9.053), math.rad(-24.465), math.rad(52.884)),
+					},
+					["Right Arm"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.new(0.483, 0.041, 0.052) * CFrame.Angles(math.rad(5.787), math.rad(-27.903), math.rad(115.165)),
+					},
+					["Head"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.Angles(math.rad(-5.099), math.rad(4.24), math.rad(-65.031)),
+					},
+				},
+			},
+		},
+		[0.333] = {
+			["HumanoidRootPart"] = {
+				Style = 'Linear',
+				Direction = 'In',
+				CFrame = CFrame.new(),
+				["Torso"] = {
+					Style = 'Linear',
+					Direction = 'In',
+					CFrame = CFrame.new(0.024, -0.214, -0.03) * CFrame.Angles(math.rad(15.527), math.rad(1.776), math.rad(70.302)),
+					["Left Leg"] = {
+						Style = 'Linear',
+						Direction = 'In',
+					},
+					["Right Leg"] = {
+						Style = 'Linear',
+						Direction = 'In',
+					},
+					["Left Arm"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.new(0.191, -0.349, 0.017) * CFrame.Angles(math.rad(-8.709), math.rad(-24.007), math.rad(53.342)),
+					},
+					["Right Arm"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.new(0.483, 0.041, 0.052) * CFrame.Angles(math.rad(5.787), math.rad(-27.903), math.rad(115.165)),
+					},
+					["Head"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.Angles(math.rad(-4.813), math.rad(4.125), math.rad(-65.604)),
+					},
+				},
+			},
+		},
+		[0.35] = {
+			["HumanoidRootPart"] = {
+				Style = 'Linear',
+				Direction = 'In',
+				CFrame = CFrame.new(),
+				["Torso"] = {
+					Style = 'Linear',
+					Direction = 'In',
+					CFrame = CFrame.new(0.026, -0.215, -0.03) * CFrame.Angles(math.rad(15.642), math.rad(1.833), math.rad(71.161)),
+					["Left Leg"] = {
+						Style = 'Linear',
+						Direction = 'In',
+					},
+					["Right Leg"] = {
+						Style = 'Linear',
+						Direction = 'In',
+					},
+					["Left Arm"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.new(0.191, -0.349, 0.017) * CFrame.Angles(math.rad(-8.422), math.rad(-23.606), math.rad(53.743)),
+					},
+					["Right Arm"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.new(0.483, 0.041, 0.052) * CFrame.Angles(math.rad(5.787), math.rad(-27.903), math.rad(115.165)),
+					},
+					["Head"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.Angles(math.rad(-4.469), math.rad(4.011), math.rad(-65.947)),
+					},
+				},
+			},
+		},
+		[0.367] = {
+			["HumanoidRootPart"] = {
+				Style = 'Linear',
+				Direction = 'In',
+				CFrame = CFrame.new(),
+				["Torso"] = {
+					Style = 'Linear',
+					Direction = 'In',
+					CFrame = CFrame.new(0.027, -0.216, -0.03) * CFrame.Angles(math.rad(15.699), math.rad(1.948), math.rad(71.677)),
+					["Left Leg"] = {
+						Style = 'Linear',
+						Direction = 'In',
+					},
+					["Right Leg"] = {
+						Style = 'Linear',
+						Direction = 'In',
+					},
+					["Left Arm"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.new(0.191, -0.349, 0.017) * CFrame.Angles(math.rad(-8.193), math.rad(-23.319), math.rad(53.973)),
+					},
+					["Right Arm"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.new(0.483, 0.041, 0.052) * CFrame.Angles(math.rad(5.787), math.rad(-27.903), math.rad(115.165)),
+					},
+					["Head"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.Angles(math.rad(-4.24), math.rad(3.896), math.rad(-66.119)),
+					},
+				},
+			},
+		},
+		[0.383] = {
+			["HumanoidRootPart"] = {
+				Style = 'Linear',
+				Direction = 'In',
+				CFrame = CFrame.new(),
+				["Torso"] = {
+					Style = 'Linear',
+					Direction = 'In',
+					CFrame = CFrame.new(0.027, -0.217, -0.03) * CFrame.Angles(math.rad(15.699), math.rad(1.948), math.rad(71.963)),
+					["Left Leg"] = {
+						Style = 'Linear',
+						Direction = 'In',
+					},
+					["Right Leg"] = {
+						Style = 'Linear',
+						Direction = 'In',
+					},
+					["Left Arm"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.new(0.191, -0.349, 0.017) * CFrame.Angles(math.rad(-8.021), math.rad(-23.09), math.rad(54.087)),
+					},
+					["Right Arm"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.new(0.483, 0.041, 0.052) * CFrame.Angles(math.rad(5.787), math.rad(-27.903), math.rad(115.165)),
+					},
+					["Head"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.Angles(math.rad(-4.068), math.rad(3.782), math.rad(-66.234)),
+					},
+				},
+			},
+		},
+		[0.4] = {
+			["HumanoidRootPart"] = {
+				Style = 'Linear',
+				Direction = 'In',
+				CFrame = CFrame.new(),
+				["Torso"] = {
+					Style = 'Linear',
+					Direction = 'In',
+					CFrame = CFrame.new(0.028, -0.217, -0.03) * CFrame.Angles(math.rad(15.699), math.rad(2.005), math.rad(72.021)),
+					["Left Leg"] = {
+						Style = 'Linear',
+						Direction = 'In',
+					},
+					["Right Leg"] = {
+						Style = 'Linear',
+						Direction = 'In',
+					},
+					["Left Arm"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.new(0.191, -0.349, 0.017) * CFrame.Angles(math.rad(-7.964), math.rad(-22.976), math.rad(54.145)),
+					},
+					["Right Arm"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.new(0.483, 0.041, 0.052) * CFrame.Angles(math.rad(5.787), math.rad(-27.903), math.rad(115.165)),
+					},
+					["Head"] = {
+						Style = 'Linear',
+						Direction = 'In',
+						CFrame = CFrame.Angles(math.rad(-4.011), math.rad(3.782), math.rad(-66.234)),
+					},
+				},
+			},
+		},
+	}
+}
+--
+local t = Instance.new("Tool")
+t.Name = "sugarcoat"
+t.ToolTip = "i'm not gonna sugarcoat it"
+t.CanBeDropped = false
+Tool = t
+--
+sfxs = {
+	hit = {
+		Id = "rbxassetid://9117970193",
+		Vol = .5,
+		Pitch = 1
+	},
+}
+--
+local hd = Instance.new("HumanoidDescription")
+hd.NeckAccessory = "33070696"
+
+function createsound()
+	local g = game:GetService("Players"):CreateHumanoidModelFromDescription(hd,"R15")
+	local s = g:FindFirstChildWhichIsA("Sound",true)
+	s.Volume = .5
+	s.SoundId = ""
+	s.Name = "Sound"
+	s.Parent = nil
+	g:Destroy()
+	return s
+end
+--
+local animator = loadstring(game:GetService("HttpService"):GetAsync('https://glot.io/snippets/ggi1icrgri/raw/animator15.lua'))()
+--
+function randomize(t)
+	local count = 0
+	for i,v in pairs(t) do
+		count = count + 1
+	end
+	local chosen = math.random(1,count)
+	count = 0
+	for i,v in pairs(t) do
+		count = count + 1
+		if count == chosen then
+			return v
+		end
+	end
+end
+
+function CreateSFX(Part, Sound,noplay)
+	local SFX = createsound()
+	SFX.SoundId = Sound.Id
+	SFX.Volume = Sound.Vol or .5
+	SFX.Pitch = Sound.Pitch or 1
+	--SFX.PlaybackSpeed = (math.random(8,11) * .1)
+	SFX.Parent = Part
+	if not noplay then
+		SFX:Play()
+		game:GetService("Debris"):AddItem(SFX,SFX.TimeLength + 20)
+	end
+end
+--
+pcall(function()
+	game:GetService("PhysicsService"):CreateCollisionGroup("RagdollLimb")
+end)
+pcall(function()
+	game:GetService("PhysicsService"):CollisionGroupSetCollidable("RagdollLimb","Default",false)
+end)
+--
+function RadiusKnockback(part,fromaprt,power,ti)
+	local bv = Instance.new("BodyVelocity")
+	bv.Parent = part
+	bv.Velocity = ((CFrame.new(part.Position,fromaprt.Position).LookVector*Vector3.new(1,0,1))*-power)+Vector3.new(0,30,0)
+	bv.MaxForce =Vector3.new(1,1,1)*math.huge
+	game:GetService("Debris"):AddItem(bv,ti)
+end
+
+function CreateKillTag(hum,obj)
+	local t = Instance.new("ObjectValue")
+	t.Name = "owner"
+	t.Value = obj
+	t.Parent = hum
+	game:GetService("Debris"):AddItem(t,2)
+end
+
+function CreateRagdollTag(hum,tim)
+	if hum:FindFirstChild("StunTime") then
+		hum:FindFirstChild("StunTime").Value = hum:FindFirstChild("StunTime").Value + tim/2
+		return
+	end
+	local removes = {}
+	hum.BreakJointsOnDeath = false
+	for i,v in pairs(hum.Parent:GetDescendants()) do
+		if (v:isA("Motor6D") or v:isA("Motor")) and v.Name ~= "RootJoint" and v.Name ~= "Root Hip" then
+			local a1,a2 = Instance.new("Attachment"),Instance.new("Attachment")
+			a1.Parent = v.Part0
+			a1.CFrame = v.C0
+			a2.Parent = v.Part1
+			a2.CFrame = v.C1
+			local bsc = Instance.new("BallSocketConstraint")
+			bsc.Parent = hum.Parent
+			bsc.Attachment0 = a1
+			bsc.Attachment1 = a2
+			table.insert(removes,bsc)
+			v.Enabled = false
+		end
+		if v:isA("BasePart") then
+			if (v.Name:find("Arm") or v.Name:find("Head") or v.Name:find("Leg") or v.Name:find("Foot") or v.Name:find("Hand")) and not v.Name:find("Upper") and  not v.Name:find("Lower") then
+				local hit = Instance.new("SpawnLocation")
+				hit.Enabled = false
+				hit.Size = Vector3.new(.5,.5,.5)
+				local w = Instance.new("Weld")
+				w.Parent = hit
+				hit.Transparency = 1
+				hit.Shape = Enum.PartType.Ball
+				hit.Parent = v
+				w.Part0 = v
+				w.Part1 = hit
+				if v.Name:find("Arm") or v.Name:find("Leg") then
+					w.C0 = CFrame.new(0,-.5,0)
+				end
+				game:GetService("PhysicsService"):SetPartCollisionGroup(v,"RagdollLimb")
+				table.insert(removes,hit)
+			end
+		end
+	end
+	local t = Instance.new("NumberValue")
+	t.Parent = hum
+	t.Value = tim
+	t.Name = "StunTime"
+	task.spawn(function()
+		while t.Value > 0 and t:IsDescendantOf(hum) and t:IsDescendantOf(game) do
+			task.wait()
+			hum.PlatformStand = true
+			if hum.RootPart and hum.RootPart.Velocity.Magnitude <= .2 then
+				t.Value = t.Value - .1
+			end
+		end
+		t:Destroy()
+		if hum.Health > 0 then
+			hum.BreakJointsOnDeath = true
+			hum.PlatformStand = false
+			for i,v in pairs(removes) do
+				v:Destroy()
+			end
+			for i,v in pairs(hum.Parent:GetDescendants()) do
+				if v:isA("JointInstance") then
+					v.Enabled = true
+				end
+				if v:isA("BasePart") then
+					if (v.Name:find("Arm") or v.Name:find("Head") or v.Name:find("Leg") or v.Name:find("Foot") or v.Name:find("Hand")) and not v.Name:find("Upper") or  not v.Name:find("Lower") then
+						game:GetService("PhysicsService"):SetPartCollisionGroup(v,"Default")
+					end
+				end
+			end
+		end
+	end)
+end
+--
+local anims = {}
+local hits = {}
+local hitable = false
+Tool.Activated:Connect(function()
+	if not Tool.Enabled or not anims['swing'] then return end
+	Tool.Enabled = false
+	anims['swing']:Play()
+	local c,c2
+	hitable = true
+	c2 = anims['swing'].Stopped:Connect(function()
+		hits = {}
+		hitable = false
+		c2:Disconnect()
+	end)
+	task.wait(.6)
+	Tool.Enabled = true
+end)
+Tool.Equipped:Connect(function()
+	anims['swing'] = animator(Tool.Parent,anims1.swing)
+end)
+Tool.Unequipped:Connect(function()
+	for i,v in pairs(anims) do
+		v:Destroy()
+	end
+	anims = {}
+end)
+--[[Handle.Touched:Connect(function(hit)
+	if not hitable then return end
+	local hum = hit.Parent:FindFirstChildWhichIsA('Humanoid')
+	local hum2 = Tool.Parent:FindFirstChildWhichIsA('Humanoid')
+	if hum and table.find(hits,hum) == nil and hum2 then
+		table.insert(hits,hum)
+		CreateRagdollTag(hum,2)
+		CreateSFX(hit,sfxs.hit)
+		RadiusKnockback(hum.RootPart,hum2.RootPart,55,.1)
+		hum:TakeDamage(20)
+	end
+end)]]
+Tool.RequiresHandle = false
+Tool.Parent = owner.Backpack
+game:GetService("RunService").Heartbeat:Connect(function()
+	if not Tool:IsDescendantOf(game) then return end
+	local hum2 = Tool.Parent:FindFirstChildWhichIsA('Humanoid')
+	local tooluser = game:GetService("Players"):GetPlayerFromCharacter(Tool.Parent)
+	if hitable and hum2 then
+		local parts = workspace:GetPartBoundsInBox(hum2.RootPart.CFrame*CFrame.new(0, 0.25, -3),Vector3.new(7,8,7))
+		for i,hit in pairs(parts) do
+			if hit.Parent == nil or hit.Parent:IsDescendantOf(game) == false then continue end
+			local hum = hit.Parent:FindFirstChildWhichIsA('Humanoid')
+			if hum and table.find(hits,hum) == nil and hum ~= hum2 then
+				table.insert(hits,hum)
+				CreateRagdollTag(hum,2)
+				CreateSFX(hit,sfxs.hit)
+				RadiusKnockback(hum.RootPart,hum2.RootPart,10,.2)
+				hum:TakeDamage(12.5)
+				local hitplr = game:GetService("Players"):GetPlayerFromCharacter(hit.Parent)
+				if hitplr and tooluser then
+					sugarcoat(hitplr,tooluser and tooluser.Character)
+				end
+				if tooluser then
+					sugarcoat(tooluser,tooluser.Character)
+				end
+			end
+		end
+	end
+end)
