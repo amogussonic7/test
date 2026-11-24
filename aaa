@@ -3,7 +3,7 @@ local char = plr.Character
 local hrp = char:FindFirstChild("HumanoidRootPart")
 local hum = char:FindFirstChild("Humanoid")
 local Randomness = Random.new()
-local wspeed = 1
+local wspeed = 1 -- ingame weapon speed stat
 local parry_time = 0.2+0.1
 local stun_time = 0.4
 
@@ -29,7 +29,7 @@ local tool = Instance.new("Tool")
 local pos1 = CFrame.new(0, .2, -1.5) * CFrame.Angles(0, math.rad(90), math.rad(90))
 tool.Grip = pos1
 tool.Name = "Steel Sword"
-tool.ToolTip = "The result of being wiped 200 times."
+tool.ToolTip = "Your trusty weapon"
 tool.CanBeDropped = false
 script.Parent = tool
 
@@ -435,14 +435,14 @@ tool.Equipped:Connect(function()
 	plr = game:GetService("Players"):GetPlayerFromCharacter(char)
 	hrp = char:FindFirstChild("HumanoidRootPart")
 	hum = char:FindFirstChild("Humanoid")
-
+	
 	if char and hrp and hum and hum.Health > 0 then else
 		tool.Parent = workspace
 		return
 	end
-
+	
 	if hitpart then hitpart:Destroy() end
-
+	
 	hitpart = Instance.new("Part")
 	Weld1 = Instance.new("Weld")
 	hitpart.Parent = hrp
@@ -461,15 +461,15 @@ tool.Equipped:Connect(function()
 	Weld1.C0 = CFrame.new(0.0511103868, 0.548256874, -2.67054749, 1, 0, 0, 0, 1, 0, 0, 0, 1)
 	Weld1.Part0 = hitpart.Parent
 	Weld1.Part1 = hitpart
-
+	
 	hitpart:SetNetworkOwner(plr)
-
+	
 	connect_char()
-
+	
 	if not char:FindFirstChild("WeldFolder") then
 		makewelds(char)
 	end
-
+	
 	Unsheath:Play()
 	idle() -- i put animation in function because LAZY!
 	task.wait(0.5) -- wait for animations to be done before continuing the script
@@ -506,14 +506,12 @@ local attacking = false
 local explosion_ff = {}
 local aid = 0
 tool.Activated:Connect(function()
-	if can_use() and not attacking --[[and not parrying]] and not stunned then
-		--[[
+	if can_use() and not attacking and not parrying and not stunned then
 		if currentparry then
 			if not parryhitConf then 
 				return
 			end
 		end
-		]]
 		attacking = true
 		aid = 1
 		local cid = aid
@@ -541,7 +539,7 @@ tool.Activated:Connect(function()
 		local candamage = true
 		local params = OverlapParams.new()
 		params.FilterDescendantsInstances = {char}
-		params.FilterType = Enum.RaycastFilterType.Blacklist
+		params.FilterType = Enum.RaycastFilterType.Exclude
 		params.MaxParts = 100
 		local connection = game:GetService("RunService").Heartbeat:Connect(function()
 			for _,part in ipairs(workspace:GetPartsInPart(hitpart,params)) do
@@ -559,7 +557,7 @@ tool.Activated:Connect(function()
 							tool.Parent = char
 						end
 						stunned = true
-
+						
 						coroutine.wrap(function()
 							if math.random(1,2)==1 then
 								parryhit1()
@@ -567,16 +565,16 @@ tool.Activated:Connect(function()
 								parryhit2()
 							end
 						end)()
-
+						
 						last_stun = os.clock()
 						stunfx(stun_time)
 						aid = 1
-
+						
 						local cid = aid
 						repeat
 							task.wait()
 						until os.clock()-last_stun >= stun_time
-
+						
 						stunned = false
 						if aid == cid then
 							idle()
@@ -614,44 +612,13 @@ end)
 local parry = Instance.new("Sound")
 parry.SoundId = "rbxassetid://4954186776"
 parry.Volume = 2
+PitchShiftSoundEffect0 = Instance.new("PitchShiftSoundEffect")
+PitchShiftSoundEffect0.Parent = parry
+PitchShiftSoundEffect0.Octave = 1.5
 parry.Parent = handle
-
-pcall(function()
-	local sfx = Instance.new("EchoSoundEffect")
-	sfx.Parent = parry
-	sfx.DryLevel = 3
-	sfx.WetLevel = -6
-	sfx.Delay = 0.15
-end)
-
-pcall(function()
-	local PitchShiftSoundEffect0 = Instance.new("PitchShiftSoundEffect")
-	PitchShiftSoundEffect0.Parent = parry
-	PitchShiftSoundEffect0.Octave = 1.5
-end)
-
 local parrystart = Instance.new("Sound")
 parrystart.SoundId = "rbxassetid://28166555"
 parrystart.Parent = handle
-
-local sparkle1 = Instance.new("Sound")
-sparkle1.SoundId = "rbxassetid://9126072038"
-sparkle1.Parent = handle
-
-local sparkle2 = Instance.new("Sound")
-sparkle2.SoundId = "rbxassetid://9126073375"
-sparkle2.Parent = handle
-
-local sparkle3 = Instance.new("Sound")
-sparkle3.SoundId = "rbxassetid://9126074225"
-sparkle3.Parent = handle
-
-local sparkle4 = Instance.new("Sound")
-sparkle4.SoundId = "rbxassetid://9126072040"
-sparkle4.Parent = handle
-
-local sparkles = {sparkle1,sparkle2,sparkle3,sparkle4}
-local sparkle_id = 0
 
 dodgesound = Instance.new("Sound")
 dodgesound.SoundId = "rbxassetid://4340253186"
@@ -664,7 +631,7 @@ function connect_char()
 	if dodgeprompt then dodgeprompt:Destroy() end
 	if humdied then humdied:Disconnect() end
 	if healthchanged then healthchanged:Disconnect() end
-
+	
 	parryprompt = Instance.new("ProximityPrompt")
 	parryprompt.Style = Enum.ProximityPromptStyle.Custom
 	parryprompt.ClickablePrompt = false
@@ -712,40 +679,12 @@ function connect_char()
 		--local new_health = hum.Health
 		if new_health > 0 and new_health < last_health then
 			if currentparry then
-				if can_use() and not stunned then
-					if attacking and not attacked then
-						last_health = hum.Health
-						return
-					end
-				else
-					last_health = hum.Health
-					return
-				end
-				pid = 1
-				local cid = pid
-				
 				local damage = last_health - new_health
 				char.Humanoid.Health = last_health + 10 / dampening
 				if 4 >= dampening then
 					dampening = 1
 				end
-				
-				parrystart:Play()
-				sparkle_id = 1
-				if sparkle_id >= #sparkles then
-					sparkle_id = 1
-				end
-				sparkles[sparkle_id]:Play()
-				
 				pfx(damage)
-				
-				task.wait(parry_time)
-				--task.wait(0.2)
-
-				if pid == cid then
-					dampening = 1
-					idle()
-				end
 			elseif not currentparry and true == false then
 				if char:FindFirstChild("WeldFolder") then
 				else
@@ -764,48 +703,52 @@ function connect_char()
 		end
 		last_health = hum.Health
 	end)
-	
-	--[[parryprompt.Triggered:Connect(function(who)
+
+	parryprompt.Triggered:Connect(function(who)
 		if who ~= plr then return end
 		if can_use() and not stunned then
 			if attacking and not attacked then
 				return
 			end
-
+			
 			if currentparry then
 				if not parryhitConf then 
 					return
 				end
 				if pc then return end
 			end
-			]]
-
+			
 			pid = 1
-
+			
 			local cid = pid
 			currentparry = true
 			parryhitConf = false
 			plr.Character.Humanoid:SetAttribute("parry",true)
-
+			parrystart:Play()
+			
+			coroutine.wrap(function()
+				parryinit()
+			end)()
+			
 			local healthWas = char.Humanoid.Health
 			dampening = 1
-
+			
 			for i,v in ipairs(explosion_ff) do
 				v:Destroy()
 			end
-			--[[
+			
 			task.wait(parry_time)
-
+			
 			if pid == cid then else return end
 			currentparry = false
 			plr.Character.Humanoid:SetAttribute("parry",nil)
-
+			
 			task.wait(.2)
-
+			
 			if pid == cid then else return end
-
+			
 			idle()
-
+			
 			if not parryhitConf then
 				task.wait(.2)
 				if pid == cid then else return end
@@ -813,9 +756,8 @@ function connect_char()
 			end
 		end
 	end)
-	]]
 
-	--DODGE----------------------------------------------------------------ዱቡሻ
+	--DODGE----------------------------------------------------------------
 
 	dodgeprompt = Instance.new("ProximityPrompt")
 	dodgeprompt.Style = Enum.ProximityPromptStyle.Custom
@@ -849,5 +791,3 @@ function connect_char()
 		i:Destroy()
 	end)
 end
-
-		
